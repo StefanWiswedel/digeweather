@@ -1,11 +1,11 @@
 {
-  "timestamp": "00:08:11",
+  "timestamp": "00:09:12",
   "sensorId": "10567117",
-  "battery": "OK",
+  "battery": "LOW",
   "temperature": 1.4,
   "humidity": 56,
-  "windSpeed": 2.1,
-  "windGust": 2.2,
-  "windDirection": 42,
+  "windSpeed": 4.2,
+  "windGust": 4.9,
+  "windDirection": 120,
   "rain": 69.2
 }
