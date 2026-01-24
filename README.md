@@ -1,0 +1,2 @@
+# digeweather
+Digevej Weather Station
