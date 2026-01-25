@@ -260,6 +260,19 @@
             background: var(--bg-card-hover);
             border-radius: 12px;
             min-width: 80px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .forecast-day:hover {
+            background: var(--bg-card);
+            transform: translateY(-2px);
+        }
+
+        .forecast-day.expanded {
+            min-width: 160px;
+            background: var(--bg-card);
         }
 
         .forecast-day .day {
@@ -289,6 +302,30 @@
             font-size: 0.7rem;
             color: var(--rain-color);
             margin-top: 4px;
+        }
+
+        .forecast-day .details {
+            display: none;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.75rem;
+            text-align: left;
+        }
+
+        .forecast-day.expanded .details {
+            display: block;
+        }
+
+        .forecast-day .details .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            color: var(--text-secondary);
+        }
+
+        .forecast-day .details .detail-row span:last-child {
+            color: var(--text-primary);
         }
 
         /* Status indicator */
@@ -642,6 +679,7 @@
             let tempMins = [];
             let tempMaxs = [];
             let winds = [];
+            let windMaxs = [];
             let rains = [];
 
             // Select data based on current range
@@ -696,6 +734,7 @@
                     tempMins.push(entry.tempMin);
                     tempMaxs.push(entry.tempMax);
                     winds.push(entry.windAvg);
+                    windMaxs.push(entry.windMax);
                     rains.push(entry.rainDelta || 0);
                 }
             } else if (currentRange === '30d') {
@@ -711,6 +750,7 @@
                     tempMins.push(entry.tempMin);
                     tempMaxs.push(entry.tempMax);
                     winds.push(entry.windAvg);
+                    windMaxs.push(entry.windMax);
                     rains.push(entry.rainDelta || 0);
                 }
             } else if (currentRange === '1y') {
@@ -726,6 +766,7 @@
                     tempMins.push(entry.tempMin);
                     tempMaxs.push(entry.tempMax);
                     winds.push(entry.windAvg);
+                    windMaxs.push(entry.windMax);
                     rains.push(entry.rainDelta || 0);
                 }
             } else if (currentRange === 'all') {
@@ -741,6 +782,7 @@
                     tempMins.push(entry.tempMin);
                     tempMaxs.push(entry.tempMax);
                     winds.push(entry.windAvg);
+                    windMaxs.push(entry.windMax);
                     rains.push(entry.rainDelta || 0);
                 }
             }
@@ -811,18 +853,36 @@
             // Wind chart
             const windCtx = document.getElementById('windChart').getContext('2d');
             if (windChart) windChart.destroy();
+
+            const windDatasets = [{
+                label: currentRange === '24h' ? 'Wind' : 'Avg',
+                data: winds,
+                borderColor: '#95e1d3',
+                backgroundColor: 'rgba(149,225,211,0.1)',
+                fill: true
+            }];
+
+            // Add gust line for longer ranges
+            if (windMaxs.length > 0 && currentRange !== '24h') {
+                windDatasets.push({
+                    label: 'Gust',
+                    data: windMaxs,
+                    borderColor: 'rgba(255, 193, 7, 0.6)',
+                    borderWidth: 1,
+                    borderDash: [5, 5],
+                    fill: false
+                });
+            }
+
             windChart = new Chart(windCtx, {
                 type: 'line',
-                data: {
-                    labels,
-                    datasets: [{
-                        data: winds,
-                        borderColor: '#95e1d3',
-                        backgroundColor: 'rgba(149,225,211,0.1)',
-                        fill: true
-                    }]
-                },
-                options: chartOptions
+                data: { labels, datasets: windDatasets },
+                options: {
+                    ...chartOptions,
+                    plugins: {
+                        legend: { display: windMaxs.length > 0 && currentRange !== '24h', labels: { color: '#888' } }
+                    }
+                }
             });
 
             // Rain chart (bar chart with proper time labels)
@@ -910,7 +970,13 @@
                         tempMax: next6h?.details?.air_temperature_max || details.air_temperature,
                         tempMin: next6h?.details?.air_temperature_min || details.air_temperature,
                         symbol: next6h?.summary?.symbol_code || 'cloudy',
-                        precip: next6h?.details?.precipitation_amount || 0
+                        precip: next6h?.details?.precipitation_amount || 0,
+                        // Extra details for expanded view
+                        wind: details.wind_speed,
+                        windDir: details.wind_from_direction,
+                        humidity: details.relative_humidity,
+                        clouds: details.cloud_area_fraction,
+                        pressure: details.air_pressure_at_sea_level
                     };
                 }
             });
@@ -923,9 +989,11 @@
                 const dayName = idx === 0 ? 'Today' :
                                idx === 1 ? 'Tomorrow' :
                                new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
+                const fullDate = new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const windDirName = f.windDir !== undefined ? getWindDirectionName(f.windDir) : '--';
 
                 return `
-                    <div class="forecast-day">
+                    <div class="forecast-day" onclick="this.classList.toggle('expanded')">
                         <div class="day">${dayName}</div>
                         <div class="icon">${getWeatherIcon(f.symbol)}</div>
                         <div class="temp-range">
@@ -933,6 +1001,13 @@
                             <span class="temp-low">${Math.round(f.tempMin)}°</span>
                         </div>
                         ${f.precip > 0 ? `<div class="precip">${f.precip.toFixed(1)}mm</div>` : ''}
+                        <div class="details">
+                            <div class="detail-row"><span>Date</span><span>${fullDate}</span></div>
+                            <div class="detail-row"><span>Wind</span><span>${f.wind !== undefined ? f.wind.toFixed(1) : '--'} m/s ${windDirName}</span></div>
+                            <div class="detail-row"><span>Humidity</span><span>${f.humidity !== undefined ? Math.round(f.humidity) : '--'}%</span></div>
+                            <div class="detail-row"><span>Clouds</span><span>${f.clouds !== undefined ? Math.round(f.clouds) : '--'}%</span></div>
+                            <div class="detail-row"><span>Pressure</span><span>${f.pressure !== undefined ? Math.round(f.pressure) : '--'} hPa</span></div>
+                        </div>
                     </div>
                 `;
             }).join('');
