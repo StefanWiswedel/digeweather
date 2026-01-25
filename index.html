@@ -408,9 +408,9 @@
             </div>
 
             <div class="stat-card rain">
-                <div class="label">Rain</div>
+                <div class="label">Rain (24h)</div>
                 <div class="value"><span id="rain">--</span> <small>mm</small></div>
-                <div class="sub">Total</div>
+                <div class="sub">Last hour: <span id="rain-hour">--</span> mm</div>
             </div>
         </div>
 
@@ -574,9 +574,8 @@
                 document.getElementById('wind-dir').textContent = getWindDirectionName(dir);
             }
 
-            // Rain
-            document.getElementById('rain').textContent =
-                current.rain !== undefined ? current.rain.toFixed(1) : '--';
+            // Rain - calculate from history (cumulative values)
+            updateRainDisplay();
 
             // Battery
             const batteryEl = document.getElementById('battery');
@@ -593,6 +592,48 @@
             const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
                          'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
             return dirs[Math.round(deg / 22.5) % 16];
+        }
+
+        function updateRainDisplay() {
+            // Calculate rain in last 24h from history (cumulative rain values)
+            const history = weatherData.history;
+            let rain24h = 0;
+            let rainLastHour = 0;
+
+            if (history.length > 0) {
+                // Get first and last valid rain readings for 24h
+                let firstRain = null;
+                let lastRain = null;
+
+                for (let i = 0; i < history.length; i++) {
+                    if (history[i].rain !== undefined && history[i].rain >= 0) {
+                        if (firstRain === null) firstRain = history[i].rain;
+                        lastRain = history[i].rain;
+                    }
+                }
+
+                if (firstRain !== null && lastRain !== null) {
+                    rain24h = Math.max(0, lastRain - firstRain);
+                }
+
+                // Get rain in last hour (last ~60 entries)
+                const hourAgo = Math.max(0, history.length - 60);
+                let firstHourRain = null;
+
+                for (let i = hourAgo; i < history.length; i++) {
+                    if (history[i].rain !== undefined && history[i].rain >= 0) {
+                        if (firstHourRain === null) firstHourRain = history[i].rain;
+                        lastRain = history[i].rain;
+                    }
+                }
+
+                if (firstHourRain !== null && lastRain !== null) {
+                    rainLastHour = Math.max(0, lastRain - firstHourRain);
+                }
+            }
+
+            document.getElementById('rain').textContent = rain24h.toFixed(1);
+            document.getElementById('rain-hour').textContent = rainLastHour.toFixed(1);
         }
 
         function updateCharts() {
@@ -613,6 +654,35 @@
                     labels.push(entry.timestamp?.split(' ')[1]?.substring(0, 5) || '');
                     temps.push(entry.temperature);
                     winds.push(entry.windSpeed);
+                }
+
+                // Calculate hourly rain deltas from minute data for 24h view
+                // Group by hour and calculate delta for each hour
+                const hourlyRainMap = {};
+                let prevRain = null;
+                for (const entry of data) {
+                    if (entry.rain !== undefined && entry.rain >= 0) {
+                        const hour = entry.timestamp?.substring(11, 13) || '';
+                        if (hour) {
+                            if (!hourlyRainMap[hour]) {
+                                hourlyRainMap[hour] = { first: entry.rain, last: entry.rain };
+                            } else {
+                                hourlyRainMap[hour].last = entry.rain;
+                            }
+                        }
+                    }
+                }
+
+                // Build rain data with same number of points, showing hourly deltas
+                const hours = Object.keys(hourlyRainMap).sort();
+                for (let i = 0; i < labels.length; i++) {
+                    const hourLabel = labels[i]?.substring(0, 2) || '';
+                    if (hourlyRainMap[hourLabel]) {
+                        const delta = Math.max(0, hourlyRainMap[hourLabel].last - hourlyRainMap[hourLabel].first);
+                        rains.push(delta);
+                    } else {
+                        rains.push(0);
+                    }
                 }
             } else if (currentRange === '7d') {
                 // Use hourly data, last 168 hours (7 days)
@@ -755,43 +825,40 @@
                 options: chartOptions
             });
 
-            // Rain chart (bar chart for hourly data, message for 24h)
+            // Rain chart (bar chart with proper time labels)
             const rainCtx = document.getElementById('rainChart').getContext('2d');
             if (rainChart) rainChart.destroy();
 
-            if (currentRange !== '24h' && rains.length > 0) {
-                rainChart = new Chart(rainCtx, {
-                    type: 'bar',
-                    data: {
-                        labels,
-                        datasets: [{
-                            label: 'Hourly Rain',
-                            data: rains,
-                            backgroundColor: 'rgba(116, 185, 255, 0.6)',
-                            borderColor: '#74b9ff',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: chartOptions
-                });
-            } else {
-                // Show message for 24h range
-                rainChart = new Chart(rainCtx, {
-                    type: 'bar',
-                    data: { labels: [''], datasets: [{ data: [0] }] },
-                    options: {
-                        ...chartOptions,
-                        plugins: {
-                            legend: { display: false },
-                            title: {
-                                display: true,
-                                text: currentRange === '24h' ? 'Hourly rain data available in 7D+ views' : 'No rain data yet',
-                                color: '#666'
-                            }
-                        }
+            // Ensure all rain values are non-negative
+            const safeRains = rains.map(r => Math.max(0, r || 0));
+
+            // Rain chart options with Y axis starting at 0
+            const rainChartOptions = {
+                ...chartOptions,
+                scales: {
+                    ...chartOptions.scales,
+                    y: {
+                        ...chartOptions.scales.y,
+                        beginAtZero: true,
+                        min: 0
                     }
-                });
-            }
+                }
+            };
+
+            rainChart = new Chart(rainCtx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Rain (mm)',
+                        data: safeRains,
+                        backgroundColor: 'rgba(116, 185, 255, 0.6)',
+                        borderColor: '#74b9ff',
+                        borderWidth: 1
+                    }]
+                },
+                options: rainChartOptions
+            });
         }
 
         // Time range button handlers
