@@ -573,7 +573,65 @@
             animation: pulse 1.5s ease-in-out infinite;
         }
 
-        /* Responsive */
+        /* Mobile-first: hide hourly preview, show vertical expanded */
+        @media (max-width: 639px) {
+            .forecast-row {
+                grid-template-columns: 70px 28px 1fr 50px;
+                padding: 12px;
+            }
+
+            .forecast-row .hourly-preview {
+                display: none;
+            }
+
+            .forecast-row .precip {
+                display: none;
+            }
+
+            .forecast-row .temp-range {
+                font-size: 0.875rem;
+            }
+
+            .forecast-row .icon {
+                font-size: 1.25rem;
+            }
+
+            /* Vertical hourly grid on mobile */
+            .hourly-full {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+                overflow-x: visible;
+            }
+
+            .hour-block {
+                min-width: unset;
+                padding: 10px 4px;
+            }
+
+            .hour-block .hour-time {
+                font-size: 0.625rem;
+            }
+
+            .hour-block .hour-icon {
+                font-size: 1.125rem;
+            }
+
+            .hour-block .hour-temp {
+                font-size: 0.875rem;
+            }
+
+            .hour-block .hour-precip {
+                font-size: 0.5625rem;
+            }
+
+            .day-stats {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+
+        /* Tablet and up */
         @media (min-width: 640px) {
             body {
                 padding: 24px;
@@ -873,6 +931,23 @@
             document.getElementById('rain-hour').textContent = rainLastHour.toFixed(1);
         }
 
+        // Helper to parse timestamps and detect gaps
+        function parseTimestamp(ts) {
+            if (!ts) return null;
+            // Handle "YYYY-MM-DD HH:MM:SS" or "YYYY-MM-DD HH" formats
+            const parts = ts.split(' ');
+            const dateParts = parts[0].split('-');
+            const timeParts = (parts[1] || '00:00:00').split(':');
+            return new Date(
+                parseInt(dateParts[0]),
+                parseInt(dateParts[1]) - 1,
+                parseInt(dateParts[2]),
+                parseInt(timeParts[0]) || 0,
+                parseInt(timeParts[1]) || 0,
+                parseInt(timeParts[2]) || 0
+            );
+        }
+
         function updateCharts() {
             let labels = [];
             let temps = [];
@@ -885,11 +960,24 @@
             if (currentRange === '24h') {
                 const data = weatherData.history;
                 const sampleRate = Math.max(1, Math.floor(data.length / 144));
+                let lastTime = null;
+                const GAP_THRESHOLD = 5 * 60 * 1000; // 5 minutes in ms
+
                 for (let i = 0; i < data.length; i += sampleRate) {
                     const entry = data[i];
+                    const currentTime = parseTimestamp(entry.timestamp);
+
+                    // Check for gap - insert null to break the line
+                    if (lastTime && currentTime && (currentTime - lastTime) > GAP_THRESHOLD) {
+                        labels.push('');
+                        temps.push(null);
+                        winds.push(null);
+                    }
+
                     labels.push(entry.timestamp?.split(' ')[1]?.substring(0, 5) || '');
                     temps.push(entry.temperature);
                     winds.push(entry.windSpeed);
+                    lastTime = currentTime;
                 }
 
                 const hourlyRainMap = {};
@@ -906,21 +994,43 @@
                     }
                 }
 
+                // Rebuild rains to match labels (including gaps)
+                rains = [];
                 for (let i = 0; i < labels.length; i++) {
-                    const hourLabel = labels[i]?.substring(0, 2) || '';
-                    if (hourlyRainMap[hourLabel]) {
-                        const delta = Math.max(0, hourlyRainMap[hourLabel].last - hourlyRainMap[hourLabel].first);
-                        rains.push(delta);
+                    if (labels[i] === '') {
+                        rains.push(0); // Gap marker
                     } else {
-                        rains.push(0);
+                        const hourLabel = labels[i]?.substring(0, 2) || '';
+                        if (hourlyRainMap[hourLabel]) {
+                            const delta = Math.max(0, hourlyRainMap[hourLabel].last - hourlyRainMap[hourLabel].first);
+                            rains.push(delta);
+                        } else {
+                            rains.push(0);
+                        }
                     }
                 }
             } else if (currentRange === '7d') {
                 const data = weatherData.hourly.slice(-168);
                 const sampleRate = Math.max(1, Math.floor(data.length / 84));
+                let lastTime = null;
+                const GAP_THRESHOLD = 3 * 60 * 60 * 1000; // 3 hours in ms
+
                 for (let i = 0; i < data.length; i += sampleRate) {
                     const entry = data[i];
                     const hour = entry.hour || '';
+                    const currentTime = parseTimestamp(hour);
+
+                    // Check for gap
+                    if (lastTime && currentTime && (currentTime - lastTime) > GAP_THRESHOLD) {
+                        labels.push('');
+                        temps.push(null);
+                        tempMins.push(null);
+                        tempMaxs.push(null);
+                        winds.push(null);
+                        windMaxs.push(null);
+                        rains.push(0);
+                    }
+
                     labels.push(hour.split(' ')[1] || hour.substring(5));
                     temps.push(entry.tempAvg);
                     tempMins.push(entry.tempMin);
@@ -928,13 +1038,29 @@
                     winds.push(entry.windAvg);
                     windMaxs.push(entry.windMax);
                     rains.push(entry.rainDelta || 0);
+                    lastTime = currentTime;
                 }
             } else if (currentRange === '30d') {
                 const data = weatherData.hourly.slice(-720);
                 const sampleRate = Math.max(1, Math.floor(data.length / 120));
+                let lastTime = null;
+                const GAP_THRESHOLD = 6 * 60 * 60 * 1000; // 6 hours in ms
+
                 for (let i = 0; i < data.length; i += sampleRate) {
                     const entry = data[i];
                     const hour = entry.hour || '';
+                    const currentTime = parseTimestamp(hour);
+
+                    if (lastTime && currentTime && (currentTime - lastTime) > GAP_THRESHOLD) {
+                        labels.push('');
+                        temps.push(null);
+                        tempMins.push(null);
+                        tempMaxs.push(null);
+                        winds.push(null);
+                        windMaxs.push(null);
+                        rains.push(0);
+                    }
+
                     labels.push(hour.substring(5, 10));
                     temps.push(entry.tempAvg);
                     tempMins.push(entry.tempMin);
@@ -942,13 +1068,29 @@
                     winds.push(entry.windAvg);
                     windMaxs.push(entry.windMax);
                     rains.push(entry.rainDelta || 0);
+                    lastTime = currentTime;
                 }
             } else if (currentRange === '1y') {
                 const data = weatherData.hourly.slice(-8760);
                 const sampleRate = Math.max(1, Math.floor(data.length / 150));
+                let lastTime = null;
+                const GAP_THRESHOLD = 24 * 60 * 60 * 1000; // 24 hours in ms
+
                 for (let i = 0; i < data.length; i += sampleRate) {
                     const entry = data[i];
                     const hour = entry.hour || '';
+                    const currentTime = parseTimestamp(hour);
+
+                    if (lastTime && currentTime && (currentTime - lastTime) > GAP_THRESHOLD) {
+                        labels.push('');
+                        temps.push(null);
+                        tempMins.push(null);
+                        tempMaxs.push(null);
+                        winds.push(null);
+                        windMaxs.push(null);
+                        rains.push(0);
+                    }
+
                     labels.push(hour.substring(5, 10));
                     temps.push(entry.tempAvg);
                     tempMins.push(entry.tempMin);
@@ -956,13 +1098,29 @@
                     winds.push(entry.windAvg);
                     windMaxs.push(entry.windMax);
                     rains.push(entry.rainDelta || 0);
+                    lastTime = currentTime;
                 }
             } else if (currentRange === 'all') {
                 const data = weatherData.hourly;
                 const sampleRate = Math.max(1, Math.floor(data.length / 150));
+                let lastTime = null;
+                const GAP_THRESHOLD = 48 * 60 * 60 * 1000; // 48 hours in ms
+
                 for (let i = 0; i < data.length; i += sampleRate) {
                     const entry = data[i];
                     const hour = entry.hour || '';
+                    const currentTime = parseTimestamp(hour);
+
+                    if (lastTime && currentTime && (currentTime - lastTime) > GAP_THRESHOLD) {
+                        labels.push('');
+                        temps.push(null);
+                        tempMins.push(null);
+                        tempMaxs.push(null);
+                        winds.push(null);
+                        windMaxs.push(null);
+                        rains.push(0);
+                    }
+
                     labels.push(hour.substring(0, 10));
                     temps.push(entry.tempAvg);
                     tempMins.push(entry.tempMin);
@@ -970,6 +1128,7 @@
                     winds.push(entry.windAvg);
                     windMaxs.push(entry.windMax);
                     rains.push(entry.rainDelta || 0);
+                    lastTime = currentTime;
                 }
             }
 
@@ -989,8 +1148,9 @@
                 },
                 elements: {
                     point: { radius: 0 },
-                    line: { tension: 0.3, borderWidth: 1.5 }
-                }
+                    line: { tension: 0.3, borderWidth: 1.5, spanGaps: false }
+                },
+                spanGaps: false  // Don't connect points across null values
             };
 
             // Temperature chart
