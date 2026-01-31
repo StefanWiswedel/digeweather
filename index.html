@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Copenhagen Weather Station</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
@@ -931,7 +932,7 @@
             document.getElementById('rain-hour').textContent = rainLastHour.toFixed(1);
         }
 
-        // Helper to parse timestamps and detect gaps
+        // Helper to parse timestamps
         function parseTimestamp(ts) {
             if (!ts) return null;
             // Handle "YYYY-MM-DD HH:MM:SS" or "YYYY-MM-DD HH" formats
@@ -948,198 +949,147 @@
             );
         }
 
+        // Get time range boundaries
+        function getTimeRange(range) {
+            const now = new Date();
+            let minTime, unit, displayFormat;
+
+            switch (range) {
+                case '24h':
+                    minTime = new Date(now - 24 * 60 * 60 * 1000);
+                    unit = 'hour';
+                    displayFormat = 'HH:mm';
+                    break;
+                case '7d':
+                    minTime = new Date(now - 7 * 24 * 60 * 60 * 1000);
+                    unit = 'day';
+                    displayFormat = 'EEE';
+                    break;
+                case '30d':
+                    minTime = new Date(now - 30 * 24 * 60 * 60 * 1000);
+                    unit = 'day';
+                    displayFormat = 'MMM d';
+                    break;
+                case '1y':
+                    minTime = new Date(now - 365 * 24 * 60 * 60 * 1000);
+                    unit = 'month';
+                    displayFormat = 'MMM';
+                    break;
+                case 'all':
+                default:
+                    minTime = null; // Will be set from data
+                    unit = 'month';
+                    displayFormat = 'MMM yyyy';
+                    break;
+            }
+
+            return { minTime, maxTime: now, unit, displayFormat };
+        }
+
         function updateCharts() {
-            let labels = [];
-            let temps = [];
-            let tempMins = [];
-            let tempMaxs = [];
-            let winds = [];
-            let windMaxs = [];
-            let rains = [];
+            const { minTime, maxTime, unit, displayFormat } = getTimeRange(currentRange);
 
+            // Prepare data arrays as {x: Date, y: value} pairs
+            let tempData = [];
+            let tempMinData = [];
+            let tempMaxData = [];
+            let windData = [];
+            let windMaxData = [];
+            let rainData = [];
+
+            // Choose data source based on range
+            let sourceData, useHourly;
             if (currentRange === '24h') {
-                const data = weatherData.history;
-                const sampleRate = Math.max(1, Math.floor(data.length / 144));
-                let lastTime = null;
-                const GAP_THRESHOLD = 5 * 60 * 1000; // 5 minutes in ms
+                sourceData = weatherData.history;
+                useHourly = false;
+            } else {
+                sourceData = weatherData.hourly;
+                useHourly = true;
+            }
 
-                for (let i = 0; i < data.length; i += sampleRate) {
-                    const entry = data[i];
-                    const currentTime = parseTimestamp(entry.timestamp);
+            // Sample rate to avoid too many points
+            const maxPoints = 200;
+            const sampleRate = Math.max(1, Math.floor(sourceData.length / maxPoints));
 
-                    // Check for gap - insert null to break the line
-                    if (lastTime && currentTime && (currentTime - lastTime) > GAP_THRESHOLD) {
-                        labels.push('');
-                        temps.push(null);
-                        winds.push(null);
-                    }
-
-                    labels.push(entry.timestamp?.split(' ')[1]?.substring(0, 5) || '');
-                    temps.push(entry.temperature);
-                    winds.push(entry.windSpeed);
-                    lastTime = currentTime;
-                }
-
-                const hourlyRainMap = {};
-                for (const entry of data) {
+            // Build hourly rain map for 24h view
+            const hourlyRainMap = {};
+            if (!useHourly) {
+                for (const entry of sourceData) {
                     if (entry.rain !== undefined && entry.rain >= 0) {
-                        const hour = entry.timestamp?.substring(11, 13) || '';
-                        if (hour) {
-                            if (!hourlyRainMap[hour]) {
-                                hourlyRainMap[hour] = { first: entry.rain, last: entry.rain };
+                        const hourKey = entry.timestamp?.substring(0, 13) || '';
+                        if (hourKey) {
+                            if (!hourlyRainMap[hourKey]) {
+                                hourlyRainMap[hourKey] = { first: entry.rain, last: entry.rain, time: parseTimestamp(entry.timestamp) };
                             } else {
-                                hourlyRainMap[hour].last = entry.rain;
+                                hourlyRainMap[hourKey].last = entry.rain;
                             }
                         }
                     }
                 }
+            }
 
-                // Rebuild rains to match labels (including gaps)
-                rains = [];
-                for (let i = 0; i < labels.length; i++) {
-                    if (labels[i] === '') {
-                        rains.push(0); // Gap marker
-                    } else {
-                        const hourLabel = labels[i]?.substring(0, 2) || '';
-                        if (hourlyRainMap[hourLabel]) {
-                            const delta = Math.max(0, hourlyRainMap[hourLabel].last - hourlyRainMap[hourLabel].first);
-                            rains.push(delta);
-                        } else {
-                            rains.push(0);
-                        }
-                    }
-                }
-            } else if (currentRange === '7d') {
-                const data = weatherData.hourly.slice(-168);
-                const sampleRate = Math.max(1, Math.floor(data.length / 84));
-                let lastTime = null;
-                const GAP_THRESHOLD = 3 * 60 * 60 * 1000; // 3 hours in ms
+            for (let i = 0; i < sourceData.length; i += sampleRate) {
+                const entry = sourceData[i];
+                const timestamp = useHourly ? parseTimestamp(entry.hour) : parseTimestamp(entry.timestamp);
 
-                for (let i = 0; i < data.length; i += sampleRate) {
-                    const entry = data[i];
-                    const hour = entry.hour || '';
-                    const currentTime = parseTimestamp(hour);
+                if (!timestamp) continue;
 
-                    // Check for gap
-                    if (lastTime && currentTime && (currentTime - lastTime) > GAP_THRESHOLD) {
-                        labels.push('');
-                        temps.push(null);
-                        tempMins.push(null);
-                        tempMaxs.push(null);
-                        winds.push(null);
-                        windMaxs.push(null);
-                        rains.push(0);
-                    }
+                // Skip data outside the time range (except 'all')
+                if (minTime && timestamp < minTime) continue;
 
-                    labels.push(hour.split(' ')[1] || hour.substring(5));
-                    temps.push(entry.tempAvg);
-                    tempMins.push(entry.tempMin);
-                    tempMaxs.push(entry.tempMax);
-                    winds.push(entry.windAvg);
-                    windMaxs.push(entry.windMax);
-                    rains.push(entry.rainDelta || 0);
-                    lastTime = currentTime;
-                }
-            } else if (currentRange === '30d') {
-                const data = weatherData.hourly.slice(-720);
-                const sampleRate = Math.max(1, Math.floor(data.length / 120));
-                let lastTime = null;
-                const GAP_THRESHOLD = 6 * 60 * 60 * 1000; // 6 hours in ms
-
-                for (let i = 0; i < data.length; i += sampleRate) {
-                    const entry = data[i];
-                    const hour = entry.hour || '';
-                    const currentTime = parseTimestamp(hour);
-
-                    if (lastTime && currentTime && (currentTime - lastTime) > GAP_THRESHOLD) {
-                        labels.push('');
-                        temps.push(null);
-                        tempMins.push(null);
-                        tempMaxs.push(null);
-                        winds.push(null);
-                        windMaxs.push(null);
-                        rains.push(0);
-                    }
-
-                    labels.push(hour.substring(5, 10));
-                    temps.push(entry.tempAvg);
-                    tempMins.push(entry.tempMin);
-                    tempMaxs.push(entry.tempMax);
-                    winds.push(entry.windAvg);
-                    windMaxs.push(entry.windMax);
-                    rains.push(entry.rainDelta || 0);
-                    lastTime = currentTime;
-                }
-            } else if (currentRange === '1y') {
-                const data = weatherData.hourly.slice(-8760);
-                const sampleRate = Math.max(1, Math.floor(data.length / 150));
-                let lastTime = null;
-                const GAP_THRESHOLD = 24 * 60 * 60 * 1000; // 24 hours in ms
-
-                for (let i = 0; i < data.length; i += sampleRate) {
-                    const entry = data[i];
-                    const hour = entry.hour || '';
-                    const currentTime = parseTimestamp(hour);
-
-                    if (lastTime && currentTime && (currentTime - lastTime) > GAP_THRESHOLD) {
-                        labels.push('');
-                        temps.push(null);
-                        tempMins.push(null);
-                        tempMaxs.push(null);
-                        winds.push(null);
-                        windMaxs.push(null);
-                        rains.push(0);
-                    }
-
-                    labels.push(hour.substring(5, 10));
-                    temps.push(entry.tempAvg);
-                    tempMins.push(entry.tempMin);
-                    tempMaxs.push(entry.tempMax);
-                    winds.push(entry.windAvg);
-                    windMaxs.push(entry.windMax);
-                    rains.push(entry.rainDelta || 0);
-                    lastTime = currentTime;
-                }
-            } else if (currentRange === 'all') {
-                const data = weatherData.hourly;
-                const sampleRate = Math.max(1, Math.floor(data.length / 150));
-                let lastTime = null;
-                const GAP_THRESHOLD = 48 * 60 * 60 * 1000; // 48 hours in ms
-
-                for (let i = 0; i < data.length; i += sampleRate) {
-                    const entry = data[i];
-                    const hour = entry.hour || '';
-                    const currentTime = parseTimestamp(hour);
-
-                    if (lastTime && currentTime && (currentTime - lastTime) > GAP_THRESHOLD) {
-                        labels.push('');
-                        temps.push(null);
-                        tempMins.push(null);
-                        tempMaxs.push(null);
-                        winds.push(null);
-                        windMaxs.push(null);
-                        rains.push(0);
-                    }
-
-                    labels.push(hour.substring(0, 10));
-                    temps.push(entry.tempAvg);
-                    tempMins.push(entry.tempMin);
-                    tempMaxs.push(entry.tempMax);
-                    winds.push(entry.windAvg);
-                    windMaxs.push(entry.windMax);
-                    rains.push(entry.rainDelta || 0);
-                    lastTime = currentTime;
+                if (useHourly) {
+                    // Hourly data
+                    if (entry.tempAvg !== undefined) tempData.push({ x: timestamp, y: entry.tempAvg });
+                    if (entry.tempMin !== undefined) tempMinData.push({ x: timestamp, y: entry.tempMin });
+                    if (entry.tempMax !== undefined) tempMaxData.push({ x: timestamp, y: entry.tempMax });
+                    if (entry.windAvg !== undefined) windData.push({ x: timestamp, y: entry.windAvg });
+                    if (entry.windMax !== undefined) windMaxData.push({ x: timestamp, y: entry.windMax });
+                    if (entry.rainDelta !== undefined) rainData.push({ x: timestamp, y: Math.max(0, entry.rainDelta) });
+                } else {
+                    // Minute data
+                    if (entry.temperature !== undefined) tempData.push({ x: timestamp, y: entry.temperature });
+                    if (entry.windSpeed !== undefined) windData.push({ x: timestamp, y: entry.windSpeed });
                 }
             }
 
+            // For 24h rain, use hourly aggregates
+            if (!useHourly) {
+                rainData = Object.values(hourlyRainMap).map(h => ({
+                    x: h.time,
+                    y: Math.max(0, h.last - h.first)
+                })).sort((a, b) => a.x - b.x);
+            }
+
+            // Determine actual min time for 'all' range
+            let chartMinTime = minTime;
+            if (!chartMinTime && tempData.length > 0) {
+                chartMinTime = tempData[0].x;
+            }
+
+            // Base chart options with time scale
             const chartOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
                     x: {
+                        type: 'time',
+                        min: chartMinTime,
+                        max: maxTime,
+                        time: {
+                            unit: unit,
+                            displayFormats: {
+                                hour: 'HH:mm',
+                                day: 'EEE d',
+                                month: 'MMM'
+                            }
+                        },
                         grid: { color: 'rgba(255, 255, 255, 0.03)' },
-                        ticks: { color: '#5c6670', maxTicksLimit: 8, font: { size: 10, family: "'JetBrains Mono', monospace" } }
+                        ticks: {
+                            color: '#5c6670',
+                            maxTicksLimit: 8,
+                            font: { size: 10, family: "'JetBrains Mono', monospace" }
+                        }
                     },
                     y: {
                         grid: { color: 'rgba(255, 255, 255, 0.03)' },
@@ -1148,9 +1098,8 @@
                 },
                 elements: {
                     point: { radius: 0 },
-                    line: { tension: 0.3, borderWidth: 1.5, spanGaps: false }
-                },
-                spanGaps: false  // Don't connect points across null values
+                    line: { tension: 0.3, borderWidth: 1.5 }
+                }
             };
 
             // Temperature chart
@@ -1159,16 +1108,16 @@
 
             const tempDatasets = [{
                 label: currentRange === '24h' ? 'Temperature' : 'Avg',
-                data: temps,
+                data: tempData,
                 borderColor: '#00d4aa',
                 backgroundColor: 'rgba(0, 212, 170, 0.05)',
                 fill: true
             }];
 
-            if (tempMins.length > 0 && currentRange !== '24h') {
+            if (tempMinData.length > 0 && currentRange !== '24h') {
                 tempDatasets.push({
                     label: 'Min',
-                    data: tempMins,
+                    data: tempMinData,
                     borderColor: 'rgba(88, 166, 255, 0.4)',
                     borderWidth: 1,
                     borderDash: [3, 3],
@@ -1176,7 +1125,7 @@
                 });
                 tempDatasets.push({
                     label: 'Max',
-                    data: tempMaxs,
+                    data: tempMaxData,
                     borderColor: 'rgba(0, 212, 170, 0.4)',
                     borderWidth: 1,
                     borderDash: [3, 3],
@@ -1186,11 +1135,11 @@
 
             tempChart = new Chart(tempCtx, {
                 type: 'line',
-                data: { labels, datasets: tempDatasets },
+                data: { datasets: tempDatasets },
                 options: {
                     ...chartOptions,
                     plugins: {
-                        legend: { display: tempMins.length > 0, labels: { color: '#5c6670', font: { size: 10 } } }
+                        legend: { display: tempMinData.length > 0 && currentRange !== '24h', labels: { color: '#5c6670', font: { size: 10 } } }
                     }
                 }
             });
@@ -1201,16 +1150,16 @@
 
             const windDatasets = [{
                 label: currentRange === '24h' ? 'Wind' : 'Avg',
-                data: winds,
+                data: windData,
                 borderColor: '#7ee787',
                 backgroundColor: 'rgba(126, 231, 135, 0.05)',
                 fill: true
             }];
 
-            if (windMaxs.length > 0 && currentRange !== '24h') {
+            if (windMaxData.length > 0 && currentRange !== '24h') {
                 windDatasets.push({
                     label: 'Gust',
-                    data: windMaxs,
+                    data: windMaxData,
                     borderColor: 'rgba(210, 168, 255, 0.4)',
                     borderWidth: 1,
                     borderDash: [3, 3],
@@ -1220,11 +1169,11 @@
 
             windChart = new Chart(windCtx, {
                 type: 'line',
-                data: { labels, datasets: windDatasets },
+                data: { datasets: windDatasets },
                 options: {
                     ...chartOptions,
                     plugins: {
-                        legend: { display: windMaxs.length > 0 && currentRange !== '24h', labels: { color: '#5c6670', font: { size: 10 } } }
+                        legend: { display: windMaxData.length > 0 && currentRange !== '24h', labels: { color: '#5c6670', font: { size: 10 } } }
                     }
                 }
             });
@@ -1233,34 +1182,30 @@
             const rainCtx = document.getElementById('rainChart').getContext('2d');
             if (rainChart) rainChart.destroy();
 
-            const safeRains = rains.map(r => Math.max(0, r || 0));
-
-            const rainChartOptions = {
-                ...chartOptions,
-                scales: {
-                    ...chartOptions.scales,
-                    y: {
-                        ...chartOptions.scales.y,
-                        beginAtZero: true,
-                        min: 0
-                    }
-                }
-            };
-
             rainChart = new Chart(rainCtx, {
                 type: 'bar',
                 data: {
-                    labels,
                     datasets: [{
                         label: 'Rain (mm)',
-                        data: safeRains,
+                        data: rainData,
                         backgroundColor: 'rgba(121, 192, 255, 0.4)',
                         borderColor: '#79c0ff',
                         borderWidth: 1,
-                        borderRadius: 2
+                        borderRadius: 2,
+                        barPercentage: 0.8
                     }]
                 },
-                options: rainChartOptions
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            beginAtZero: true,
+                            min: 0
+                        }
+                    }
+                }
             });
         }
 
