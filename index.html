@@ -323,7 +323,7 @@
             height: 160px;
         }
 
-        /* Forecast section - VERTICAL layout */
+        /* Forecast section - grouped by day with 6h blocks */
         .forecast-section {
             background: var(--bg-card);
             border: 1px solid var(--border-subtle);
@@ -344,155 +344,120 @@
         .forecast-list {
             display: flex;
             flex-direction: column;
-            gap: 2px;
-        }
-
-        .forecast-row {
-            display: grid;
-            grid-template-columns: 80px 32px 1fr 60px 50px;
             gap: 12px;
-            align-items: center;
-            padding: 10px 12px;
+        }
+
+        .forecast-day {
             background: var(--bg-secondary);
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background 0.1s;
+            border-radius: var(--border-radius);
+            overflow: hidden;
         }
 
-        .forecast-row:hover {
-            background: var(--bg-elevated);
+        .forecast-day-header {
+            font-family: var(--font-sans);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            padding: 12px 14px 0;
         }
 
-        .forecast-row.expanded {
-            background: var(--bg-elevated);
-            border: 1px solid var(--border-active);
+        .forecast-block-row {
+            display: grid;
+            grid-template-columns: 56px 36px 1fr auto;
+            gap: 10px;
+            align-items: center;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-subtle);
         }
 
-        .forecast-row .day {
+        .forecast-block-row:last-of-type {
+            border-bottom: none;
+        }
+
+        .forecast-block-row .block-time {
             font-family: var(--font-mono);
             font-size: 0.75rem;
             color: var(--text-secondary);
         }
 
-        .forecast-row .day .date {
-            font-size: 0.625rem;
-            color: var(--text-muted);
-            display: block;
-        }
-
-        .forecast-row .icon {
-            font-size: 1.125rem;
+        .forecast-block-row .block-icon {
+            font-size: 1.25rem;
             text-align: center;
         }
 
-        .forecast-row .hourly-preview {
-            display: flex;
-            gap: 4px;
-            overflow: hidden;
-        }
-
-        .hour-pip {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-width: 28px;
-            padding: 4px 2px;
-            background: var(--bg-card);
-            border-radius: 3px;
-        }
-
-        .hour-pip .time {
+        .forecast-block-row .block-temp {
             font-family: var(--font-mono);
-            font-size: 0.5rem;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            color: var(--temp-color);
+        }
+
+        .forecast-block-row .block-wind {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .forecast-block-row .block-wind .wind-arrow {
+            display: inline-block;
+            font-size: 0.75rem;
             color: var(--text-muted);
         }
 
-        .hour-pip .pip-icon {
-            font-size: 0.625rem;
-            margin: 2px 0;
+        .forecast-details-btn {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            background: transparent;
+            border: none;
+            border-top: 1px solid var(--border-subtle);
+            color: var(--text-muted);
+            font-family: var(--font-sans);
+            font-size: 0.6875rem;
+            cursor: pointer;
+            transition: color 0.1s;
         }
 
-        .hour-pip .pip-temp {
-            font-family: var(--font-mono);
-            font-size: 0.5625rem;
+        .forecast-details-btn:hover {
             color: var(--text-secondary);
         }
 
-        .hour-pip.now {
-            background: var(--border-active);
-        }
-
-        .hour-pip.now .pip-temp {
-            color: var(--accent-primary);
-        }
-
-        .forecast-row .temp-range {
-            font-family: var(--font-mono);
-            font-size: 0.8125rem;
-            text-align: right;
-        }
-
-        .forecast-row .temp-high {
-            color: var(--text-primary);
-        }
-
-        .forecast-row .temp-low {
-            color: var(--text-muted);
-            margin-left: 4px;
-        }
-
-        .forecast-row .precip {
-            font-family: var(--font-mono);
-            font-size: 0.6875rem;
-            color: var(--rain-color);
-            text-align: right;
-        }
-
-        /* Expanded forecast details */
         .forecast-details {
             display: none;
-            grid-column: 1 / -1;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid var(--border-subtle);
+            padding: 0 14px 12px;
         }
 
-        .forecast-row.expanded .forecast-details {
+        .forecast-day.expanded .forecast-details {
             display: block;
         }
 
-        .hourly-full {
-            display: flex;
+        .forecast-day.expanded .forecast-details-btn .details-label {
+            display: none;
+        }
+
+        .forecast-day.expanded .forecast-details-btn .hide-label {
+            display: inline;
+        }
+
+        .forecast-details-btn .hide-label {
+            display: none;
+        }
+
+        .hourly-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
             gap: 4px;
-            overflow-x: auto;
-            padding-bottom: 8px;
-        }
-
-        .hourly-full::-webkit-scrollbar {
-            height: 3px;
-        }
-
-        .hourly-full::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-        }
-
-        .hourly-full::-webkit-scrollbar-thumb {
-            background: var(--border-active);
-            border-radius: 2px;
         }
 
         .hour-block {
-            flex: 0 0 auto;
             text-align: center;
-            padding: 8px 6px;
-            min-width: 48px;
+            padding: 8px 4px;
             background: var(--bg-card);
             border-radius: 4px;
-        }
-
-        .hour-block.now {
-            background: var(--border-active);
-            border: 1px solid var(--accent-primary);
         }
 
         .hour-block .hour-time {
@@ -518,23 +483,6 @@
             font-size: 0.5rem;
             color: var(--rain-color);
             margin-top: 2px;
-        }
-
-        .day-stats {
-            display: flex;
-            gap: 24px;
-            margin-top: 12px;
-            font-size: 0.6875rem;
-        }
-
-        .day-stats span {
-            color: var(--text-muted);
-        }
-
-        .day-stats .val {
-            font-family: var(--font-mono);
-            color: var(--text-secondary);
-            margin-left: 4px;
         }
 
         /* Footer */
@@ -574,61 +522,12 @@
             animation: pulse 1.5s ease-in-out infinite;
         }
 
-        /* Mobile-first: hide hourly preview, show vertical expanded */
+        /* Mobile adjustments */
         @media (max-width: 639px) {
-            .forecast-row {
-                grid-template-columns: 70px 28px 1fr 50px;
-                padding: 12px;
-            }
-
-            .forecast-row .hourly-preview {
-                display: none;
-            }
-
-            .forecast-row .precip {
-                display: none;
-            }
-
-            .forecast-row .temp-range {
-                font-size: 0.875rem;
-            }
-
-            .forecast-row .icon {
-                font-size: 1.25rem;
-            }
-
-            /* Vertical hourly grid on mobile */
-            .hourly-full {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
+            .forecast-block-row {
+                grid-template-columns: 50px 30px 1fr auto;
                 gap: 8px;
-                overflow-x: visible;
-            }
-
-            .hour-block {
-                min-width: unset;
-                padding: 10px 4px;
-            }
-
-            .hour-block .hour-time {
-                font-size: 0.625rem;
-            }
-
-            .hour-block .hour-icon {
-                font-size: 1.125rem;
-            }
-
-            .hour-block .hour-temp {
-                font-size: 0.875rem;
-            }
-
-            .hour-block .hour-precip {
-                font-size: 0.5625rem;
-            }
-
-            .day-stats {
-                flex-wrap: wrap;
-                gap: 12px;
+                padding: 8px 12px;
             }
         }
 
@@ -652,20 +551,6 @@
 
             .chart-container {
                 height: 200px;
-            }
-
-            .forecast-row {
-                grid-template-columns: 100px 36px 1fr 80px 60px;
-            }
-        }
-
-        @media (min-width: 800px) {
-            .forecast-row .hourly-preview {
-                gap: 6px;
-            }
-
-            .hour-pip {
-                min-width: 36px;
             }
         }
     </style>
@@ -833,8 +718,19 @@
                 updateDisplay(data.current);
                 updateCharts();
 
-                document.getElementById('status-dot').className = 'status-dot online';
-                document.getElementById('status-text').textContent = 'Online';
+                // Check ESP32 freshness based on last data timestamp
+                const lastTs = parseTimestamp(data.current?.timestamp);
+                const ageMinutes = lastTs ? (Date.now() - lastTs.getTime()) / 60000 : Infinity;
+                if (ageMinutes < 5) {
+                    document.getElementById('status-dot').className = 'status-dot online';
+                    document.getElementById('status-text').textContent = 'Online';
+                } else {
+                    document.getElementById('status-dot').className = 'status-dot offline';
+                    const agoText = ageMinutes < 60 ? `${Math.round(ageMinutes)}m ago` :
+                                    ageMinutes < 1440 ? `${Math.round(ageMinutes / 60)}h ago` :
+                                    `${Math.round(ageMinutes / 1440)}d ago`;
+                    document.getElementById('status-text').textContent = `Offline · ${agoText}`;
+                }
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('status-dot').className = 'status-dot offline';
@@ -1246,11 +1142,26 @@
             }
         }
 
+        // Wind direction arrows (8 directions)
+        function getWindArrow(deg) {
+            if (deg === undefined || deg === null) return '';
+            const arrows = ['↓', '↙', '←', '↖', '↑', '↗', '→', '↘'];
+            return arrows[Math.round(deg / 45) % 8];
+        }
+
         function displayForecast(data) {
             const timeseries = data.properties.timeseries;
             const dailyForecasts = {};
             const currentHour = new Date().getHours();
             const today = new Date().toISOString().split('T')[0];
+
+            // 6-hour time blocks
+            const blocks = [
+                { label: '00\u201306', start: 0, end: 5 },
+                { label: '06\u201312', start: 6, end: 11 },
+                { label: '12\u201318', start: 12, end: 17 },
+                { label: '18\u201300', start: 18, end: 23 }
+            ];
 
             timeseries.forEach(entry => {
                 const date = entry.time.split('T')[0];
@@ -1261,45 +1172,46 @@
 
                 if (!dailyForecasts[date]) {
                     dailyForecasts[date] = {
-                        hourly: [],
-                        tempMax: -Infinity,
-                        tempMin: Infinity,
-                        totalPrecip: 0,
-                        noonData: null
+                        blocks: [{}, {}, {}, {}], // 4 x 6-hour blocks
+                        hourly: []
                     };
                 }
 
-                // Store hourly data (every 3 hours)
-                if (hour % 3 === 0 || (date === today && hour >= currentHour)) {
+                // Determine which 6h block this hour belongs to
+                const blockIdx = Math.floor(hour / 6);
+                const block = dailyForecasts[date].blocks[blockIdx];
+
+                // Track temps, wind, symbol for this block
+                if (!block.temps) block.temps = [];
+                block.temps.push(details.air_temperature);
+
+                if (!block.winds) block.winds = [];
+                block.winds.push(details.wind_speed);
+
+                if (!block.gusts) block.gusts = [];
+                if (details.wind_speed_of_gust !== undefined) {
+                    block.gusts.push(details.wind_speed_of_gust);
+                }
+
+                if (!block.windDirs) block.windDirs = [];
+                block.windDirs.push(details.wind_from_direction);
+
+                // Use the symbol closest to the middle of the block
+                const blockMid = blockIdx * 6 + 3;
+                if (!block.symbol || Math.abs(hour - blockMid) < Math.abs((block.symbolHour || 99) - blockMid)) {
+                    block.symbol = next6h?.summary?.symbol_code || next1h?.summary?.symbol_code || 'cloudy';
+                    block.symbolHour = hour;
+                }
+
+                // Store hourly data for details expansion
+                if (next1h || next6h) {
                     dailyForecasts[date].hourly.push({
                         hour: hour,
                         temp: details.air_temperature,
                         symbol: next1h?.summary?.symbol_code || next6h?.summary?.symbol_code || 'cloudy',
                         precip: next1h?.details?.precipitation_amount || 0,
-                        wind: details.wind_speed,
-                        isNow: date === today && hour === currentHour
+                        wind: details.wind_speed
                     });
-                }
-
-                if (details.air_temperature > dailyForecasts[date].tempMax) {
-                    dailyForecasts[date].tempMax = details.air_temperature;
-                }
-                if (details.air_temperature < dailyForecasts[date].tempMin) {
-                    dailyForecasts[date].tempMin = details.air_temperature;
-                }
-
-                if (next1h?.details?.precipitation_amount) {
-                    dailyForecasts[date].totalPrecip += next1h.details.precipitation_amount;
-                }
-
-                if (Math.abs(hour - 12) < Math.abs((dailyForecasts[date].noonData?.hour || 99) - 12)) {
-                    dailyForecasts[date].noonData = {
-                        hour: hour,
-                        symbol: next6h?.summary?.symbol_code || 'cloudy',
-                        wind: details.wind_speed,
-                        windDir: details.wind_from_direction,
-                        humidity: details.relative_humidity
-                    };
                 }
             });
 
@@ -1308,31 +1220,45 @@
 
             forecastEl.innerHTML = days.map((date, idx) => {
                 const f = dailyForecasts[date];
-                const noon = f.noonData || {};
+                const d = new Date(date + 'T12:00:00');
                 const dayName = idx === 0 ? 'Today' :
-                               idx === 1 ? 'Tmrw' :
-                               new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
-                const dateStr = new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                               idx === 1 ? 'Tomorrow' :
+                               d.toLocaleDateString('en-US', { weekday: 'long' });
+                const dateNum = d.getDate();
+                const monthName = d.toLocaleDateString('en-US', { month: 'long' });
 
-                // Preview hourly (first 6)
-                const previewHourly = f.hourly.slice(0, 6).map(h => {
-                    const timeStr = h.hour.toString().padStart(2, '0');
+                // Build 6h block rows (skip empty blocks for today's past)
+                const blockRows = blocks.map((b, bi) => {
+                    const block = f.blocks[bi];
+                    if (!block.temps || block.temps.length === 0) return '';
+
+                    // For today, skip blocks that are fully in the past
+                    if (date === today && b.end < currentHour) return '';
+
+                    const avgTemp = Math.round(block.temps.reduce((a, v) => a + v, 0) / block.temps.length);
+                    const avgWind = (block.winds.reduce((a, v) => a + v, 0) / block.winds.length).toFixed(0);
+                    const maxGust = block.gusts.length > 0 ? Math.max(...block.gusts).toFixed(0) : null;
+                    const avgDir = block.windDirs.reduce((a, v) => a + v, 0) / block.windDirs.length;
+                    const windArrow = getWindArrow(avgDir);
+                    const gustText = maxGust ? ` (${maxGust})` : '';
+
                     return `
-                        <div class="hour-pip${h.isNow ? ' now' : ''}">
-                            <span class="time">${h.isNow ? 'NOW' : timeStr}</span>
-                            <span class="pip-icon">${getWeatherIcon(h.symbol)}</span>
-                            <span class="pip-temp">${Math.round(h.temp)}°</span>
+                        <div class="forecast-block-row">
+                            <span class="block-time">${b.label}</span>
+                            <span class="block-icon">${getWeatherIcon(block.symbol || 'cloudy')}</span>
+                            <span class="block-temp">${avgTemp}°</span>
+                            <span class="block-wind">${avgWind}${gustText} <span class="wind-arrow">${windArrow}</span></span>
                         </div>
                     `;
                 }).join('');
 
-                // Full hourly for expanded
+                // Hourly detail for expansion
                 const fullHourly = f.hourly.map(h => {
                     const timeStr = h.hour.toString().padStart(2, '0') + ':00';
                     const precipHtml = h.precip > 0 ? `<div class="hour-precip">${h.precip.toFixed(1)}mm</div>` : '';
                     return `
-                        <div class="hour-block${h.isNow ? ' now' : ''}">
-                            <div class="hour-time">${h.isNow ? 'NOW' : timeStr}</div>
+                        <div class="hour-block">
+                            <div class="hour-time">${timeStr}</div>
                             <div class="hour-icon">${getWeatherIcon(h.symbol)}</div>
                             <div class="hour-temp">${Math.round(h.temp)}°</div>
                             ${precipHtml}
@@ -1341,24 +1267,15 @@
                 }).join('');
 
                 return `
-                    <div class="forecast-row" onclick="this.classList.toggle('expanded')">
-                        <div class="day">
-                            ${dayName}
-                            <span class="date">${dateStr}</span>
-                        </div>
-                        <div class="icon">${getWeatherIcon(noon.symbol || 'cloudy')}</div>
-                        <div class="hourly-preview">${previewHourly}</div>
-                        <div class="temp-range">
-                            <span class="temp-high">${Math.round(f.tempMax)}°</span>
-                            <span class="temp-low">${Math.round(f.tempMin)}°</span>
-                        </div>
-                        <div class="precip">${f.totalPrecip > 0.1 ? f.totalPrecip.toFixed(1) + 'mm' : '—'}</div>
+                    <div class="forecast-day" id="forecast-day-${idx}">
+                        <div class="forecast-day-header">${dayName} ${dateNum}. ${monthName}</div>
+                        ${blockRows}
+                        <button class="forecast-details-btn" onclick="event.stopPropagation(); document.getElementById('forecast-day-${idx}').classList.toggle('expanded')">
+                            <span class="details-label">Details ▾</span>
+                            <span class="hide-label">Hide ▴</span>
+                        </button>
                         <div class="forecast-details">
-                            <div class="hourly-full">${fullHourly}</div>
-                            <div class="day-stats">
-                                <span>Wind<span class="val">${noon.wind !== undefined ? noon.wind.toFixed(1) : '--'} m/s</span></span>
-                                <span>Humidity<span class="val">${noon.humidity !== undefined ? Math.round(noon.humidity) : '--'}%</span></span>
-                            </div>
+                            <div class="hourly-detail-grid">${fullHourly}</div>
                         </div>
                     </div>
                 `;
