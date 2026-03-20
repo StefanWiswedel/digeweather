@@ -997,24 +997,44 @@
             let windMaxData = [];
             let rainData = [];
 
-            // Choose data source based on range
-            let sourceData, useHourly;
+            // For 24h view, combine hourly data (older) with minute data (recent)
+            // For other ranges, use hourly data only
             if (currentRange === '24h') {
-                sourceData = weatherData.history;
-                useHourly = false;
-            } else {
-                sourceData = weatherData.hourly;
-                useHourly = true;
-            }
+                // Find the time range covered by minute-level history
+                const historyStart = weatherData.history.length > 0
+                    ? parseTimestamp(weatherData.history[0].timestamp)
+                    : null;
 
-            // Sample rate to avoid too many points
-            const maxPoints = 200;
-            const sampleRate = Math.max(1, Math.floor(sourceData.length / maxPoints));
+                // Add hourly data for the period before minute data starts
+                for (const entry of weatherData.hourly) {
+                    const timestamp = parseTimestamp(entry.hour);
+                    if (!timestamp) continue;
+                    if (minTime && timestamp < minTime) continue;
+                    // Skip hourly entries that overlap with minute data
+                    if (historyStart && timestamp >= historyStart) continue;
 
-            // Build hourly rain map for 24h view
-            const hourlyRainMap = {};
-            if (!useHourly) {
-                for (const entry of sourceData) {
+                    if (entry.tempAvg !== undefined) tempData.push({ x: timestamp, y: entry.tempAvg });
+                    if (entry.windAvg !== undefined) windData.push({ x: timestamp, y: entry.windAvg });
+                    if (entry.rainDelta !== undefined) rainData.push({ x: timestamp, y: Math.max(0, entry.rainDelta) });
+                }
+
+                // Add minute-level history data
+                const maxPoints = 200;
+                const sampleRate = Math.max(1, Math.floor(weatherData.history.length / maxPoints));
+                const hourlyRainMap = {};
+
+                for (let i = 0; i < weatherData.history.length; i += sampleRate) {
+                    const entry = weatherData.history[i];
+                    const timestamp = parseTimestamp(entry.timestamp);
+                    if (!timestamp) continue;
+                    if (minTime && timestamp < minTime) continue;
+
+                    if (entry.temperature !== undefined) tempData.push({ x: timestamp, y: entry.temperature });
+                    if (entry.windSpeed !== undefined) windData.push({ x: timestamp, y: entry.windSpeed });
+                }
+
+                // Build hourly rain aggregates from minute data
+                for (const entry of weatherData.history) {
                     if (entry.rain !== undefined && entry.rain >= 0) {
                         const hourKey = entry.timestamp?.substring(0, 13) || '';
                         if (hourKey) {
@@ -1026,38 +1046,26 @@
                         }
                     }
                 }
-            }
+                const minuteRain = Object.values(hourlyRainMap).map(h => ({
+                    x: h.time,
+                    y: Math.max(0, h.last - h.first)
+                }));
+                rainData = rainData.concat(minuteRain);
+                rainData.sort((a, b) => a.x - b.x);
+            } else {
+                // For 7d, 30d, 1y, all — use hourly aggregated data
+                for (const entry of weatherData.hourly) {
+                    const timestamp = parseTimestamp(entry.hour);
+                    if (!timestamp) continue;
+                    if (minTime && timestamp < minTime) continue;
 
-            for (let i = 0; i < sourceData.length; i += sampleRate) {
-                const entry = sourceData[i];
-                const timestamp = useHourly ? parseTimestamp(entry.hour) : parseTimestamp(entry.timestamp);
-
-                if (!timestamp) continue;
-
-                // Skip data outside the time range (except 'all')
-                if (minTime && timestamp < minTime) continue;
-
-                if (useHourly) {
-                    // Hourly data
                     if (entry.tempAvg !== undefined) tempData.push({ x: timestamp, y: entry.tempAvg });
                     if (entry.tempMin !== undefined) tempMinData.push({ x: timestamp, y: entry.tempMin });
                     if (entry.tempMax !== undefined) tempMaxData.push({ x: timestamp, y: entry.tempMax });
                     if (entry.windAvg !== undefined) windData.push({ x: timestamp, y: entry.windAvg });
                     if (entry.windMax !== undefined) windMaxData.push({ x: timestamp, y: entry.windMax });
                     if (entry.rainDelta !== undefined) rainData.push({ x: timestamp, y: Math.max(0, entry.rainDelta) });
-                } else {
-                    // Minute data
-                    if (entry.temperature !== undefined) tempData.push({ x: timestamp, y: entry.temperature });
-                    if (entry.windSpeed !== undefined) windData.push({ x: timestamp, y: entry.windSpeed });
                 }
-            }
-
-            // For 24h rain, use hourly aggregates
-            if (!useHourly) {
-                rainData = Object.values(hourlyRainMap).map(h => ({
-                    x: h.time,
-                    y: Math.max(0, h.last - h.first)
-                })).sort((a, b) => a.x - b.x);
             }
 
             // Determine actual min time for 'all' range
