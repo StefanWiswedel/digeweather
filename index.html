@@ -1157,19 +1157,32 @@
             const now = new Date();
             const GAP_THRESHOLD = 5 * 60 * 1000;
 
-            // Segment callback: hide line segments that span a data gap > 5 min.
-            // This is Chart.js's native way to handle gaps — no null/NaN hacks.
-            function gapSegmentStyle(ctx, normalColor) {
-                const p0 = ctx.p0.parsed;
-                const p1 = ctx.p1.parsed;
-                if (p0 && p1) {
-                    const gap = p1.x - p0.x;
-                    if (gap > GAP_THRESHOLD) {
-                        return 'transparent';
+            // Insert null points to break the line where data gaps exist.
+            // Chart.js with spanGaps:false will not draw lines across null values.
+            function insertGapBreaks(data) {
+                if (data.length < 2) return data;
+                // Sort by x first
+                data.sort((a, b) => a.x - b.x);
+                const result = [];
+                for (let i = 0; i < data.length; i++) {
+                    result.push(data[i]);
+                    if (i < data.length - 1) {
+                        const t0 = data[i].x instanceof Date ? data[i].x.getTime() : data[i].x;
+                        const t1 = data[i + 1].x instanceof Date ? data[i + 1].x.getTime() : data[i + 1].x;
+                        if (t1 - t0 > GAP_THRESHOLD) {
+                            // Insert a null point right after the last good point
+                            result.push({ x: new Date(t0 + 1000), y: null });
+                        }
                     }
                 }
-                return normalColor;
+                return result;
             }
+
+            tempData = insertGapBreaks(tempData);
+            tempMinData = insertGapBreaks(tempMinData);
+            tempMaxData = insertGapBreaks(tempMaxData);
+            windData = insertGapBreaks(windData);
+            windMaxData = insertGapBreaks(windMaxData);
 
             const chartOptions = {
                 responsive: true,
@@ -1245,10 +1258,7 @@
                 backgroundColor: tempGradient,
                 fill: true,
                 pointHoverBackgroundColor: '#c8a46e',
-                segment: {
-                    borderColor: ctx => gapSegmentStyle(ctx, '#c8a46e'),
-                    backgroundColor: ctx => gapSegmentStyle(ctx, undefined)
-                }
+                spanGaps: false
             }];
 
             if (tempMinData.length > 0 && currentRange !== '24h') {
@@ -1259,7 +1269,7 @@
                     borderWidth: 1,
                     borderDash: [4, 4],
                     fill: false,
-                    segment: { borderColor: ctx => gapSegmentStyle(ctx, 'rgba(126,158,181,0.35)') }
+                    spanGaps: false
                 });
                 tempDatasets.push({
                     label: 'Max',
@@ -1268,7 +1278,7 @@
                     borderWidth: 1,
                     borderDash: [4, 4],
                     fill: false,
-                    segment: { borderColor: ctx => gapSegmentStyle(ctx, 'rgba(200,164,110,0.35)') }
+                    spanGaps: false
                 });
             }
 
@@ -1302,10 +1312,7 @@
                 backgroundColor: windGradient,
                 fill: true,
                 pointHoverBackgroundColor: '#9ab07d',
-                segment: {
-                    borderColor: ctx => gapSegmentStyle(ctx, '#9ab07d'),
-                    backgroundColor: ctx => gapSegmentStyle(ctx, undefined)
-                }
+                spanGaps: false
             }];
 
             if (windMaxData.length > 0 && currentRange !== '24h') {
@@ -1316,7 +1323,7 @@
                     borderWidth: 1,
                     borderDash: [4, 4],
                     fill: false,
-                    segment: { borderColor: ctx => gapSegmentStyle(ctx, 'rgba(181,160,138,0.35)') }
+                    spanGaps: false
                 });
             }
 
