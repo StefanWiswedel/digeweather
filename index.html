@@ -795,6 +795,13 @@
                 </div>
                 <div class="chart-area"><canvas id="rainChart"></canvas></div>
             </div>
+
+            <div class="chart-card">
+                <div class="chart-top">
+                    <div class="chart-title">Humidity</div>
+                </div>
+                <div class="chart-area"><canvas id="humidityChart"></canvas></div>
+            </div>
         </div>
 
         <!-- FORECAST -->
@@ -825,6 +832,7 @@
         let tempChart = null;
         let windChart = null;
         let rainChart = null;
+        let humidityChart = null;
 
         let weatherData = {
             history: [],
@@ -1076,6 +1084,7 @@
             let windData = [];
             let windMaxData = [];
             let rainData = [];
+            let humidityData = [];
 
             if (currentRange === '24h') {
                 const historyStart = weatherData.history.length > 0
@@ -1105,6 +1114,7 @@
 
                     if (entry.temperature !== undefined) tempData.push({ x: timestamp, y: entry.temperature });
                     if (entry.windSpeed !== undefined) windData.push({ x: timestamp, y: entry.windSpeed });
+                    if (entry.humidity !== undefined) humidityData.push({ x: timestamp, y: entry.humidity });
                 }
 
                 for (const entry of weatherData.history) {
@@ -1177,6 +1187,7 @@
             tempMaxData = insertGapBreaks(tempMaxData);
             windData = insertGapBreaks(windData);
             windMaxData = insertGapBreaks(windMaxData);
+            humidityData = insertGapBreaks(humidityData);
 
             const chartOptions = {
                 responsive: true,
@@ -1362,6 +1373,42 @@
                             ...chartOptions.scales.y,
                             beginAtZero: true,
                             min: 0
+                        }
+                    }
+                }
+            });
+
+            // Humidity chart
+            const humidityCtx = document.getElementById('humidityChart').getContext('2d');
+            if (humidityChart) humidityChart.destroy();
+
+            const humidityGradient = humidityCtx.createLinearGradient(0, 0, 0, 140);
+            humidityGradient.addColorStop(0, 'rgba(138,171,181,0.20)');
+            humidityGradient.addColorStop(1, 'rgba(138,171,181,0)');
+
+            humidityChart = new Chart(humidityCtx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Humidity (%)',
+                        data: humidityData,
+                        borderColor: '#8aabb5',
+                        backgroundColor: humidityGradient,
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        tension: 0.3,
+                        fill: true,
+                        spanGaps: false
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            min: 0,
+                            max: 100
                         }
                     }
                 }
