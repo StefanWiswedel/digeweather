@@ -1154,30 +1154,28 @@
                 chartMinTime = tempData[0].x;
             }
 
-            // Insert null points wherever there's a gap > 5 min between
+            // Insert NaN points wherever there's a gap > 5 min between
             // consecutive data points (including gap to now at the end).
-            // This breaks the line so Chart.js doesn't draw through gaps.
+            // NaN breaks the line cleanly in Chart.js without hiding segments.
             const now = new Date();
             const GAP_THRESHOLD = 5 * 60 * 1000;
 
-            function insertGapNulls(dataArr) {
-                if (dataArr.length < 1) return;
-                // Walk backwards so insertions don't shift indices
-                for (let i = dataArr.length - 1; i >= 0; i--) {
-                    const nextTime = (i < dataArr.length - 1) ? dataArr[i + 1].x : now;
-                    const gapMs = nextTime - dataArr[i].x;
+            function insertGapBreaks(dataArr) {
+                if (dataArr.length < 2) return;
+                for (let i = dataArr.length - 1; i >= 1; i--) {
+                    const gapMs = dataArr[i].x - dataArr[i - 1].x;
                     if (gapMs > GAP_THRESHOLD) {
-                        // Insert a null 1 min after this point to break the line
-                        const nullPoint = { x: new Date(dataArr[i].x.getTime() + 60000), y: null };
-                        dataArr.splice(i + 1, 0, nullPoint);
+                        // Insert a NaN midway through the gap to break the line
+                        const midTime = new Date(dataArr[i - 1].x.getTime() + gapMs / 2);
+                        dataArr.splice(i, 0, { x: midTime, y: NaN });
                     }
                 }
             }
-            insertGapNulls(tempData);
-            insertGapNulls(tempMinData);
-            insertGapNulls(tempMaxData);
-            insertGapNulls(windData);
-            insertGapNulls(windMaxData);
+            insertGapBreaks(tempData);
+            insertGapBreaks(tempMinData);
+            insertGapBreaks(tempMaxData);
+            insertGapBreaks(windData);
+            insertGapBreaks(windMaxData);
 
             const chartOptions = {
                 responsive: true,
@@ -1234,8 +1232,9 @@
                 },
                 elements: {
                     point: { radius: 0, hoverRadius: 4, hoverBorderWidth: 2 },
-                    line: { tension: 0.4, borderWidth: 2, spanGaps: false }
-                }
+                    line: { tension: 0.4, borderWidth: 2 }
+                },
+                spanGaps: false
             };
 
             // Temperature chart
