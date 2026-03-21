@@ -1154,28 +1154,22 @@
                 chartMinTime = tempData[0].x;
             }
 
-            // Insert NaN points wherever there's a gap > 5 min between
-            // consecutive data points (including gap to now at the end).
-            // NaN breaks the line cleanly in Chart.js without hiding segments.
             const now = new Date();
             const GAP_THRESHOLD = 5 * 60 * 1000;
 
-            function insertGapBreaks(dataArr) {
-                if (dataArr.length < 2) return;
-                for (let i = dataArr.length - 1; i >= 1; i--) {
-                    const gapMs = dataArr[i].x - dataArr[i - 1].x;
-                    if (gapMs > GAP_THRESHOLD) {
-                        // Insert a NaN midway through the gap to break the line
-                        const midTime = new Date(dataArr[i - 1].x.getTime() + gapMs / 2);
-                        dataArr.splice(i, 0, { x: midTime, y: NaN });
+            // Segment callback: hide line segments that span a data gap > 5 min.
+            // This is Chart.js's native way to handle gaps — no null/NaN hacks.
+            function gapSegmentStyle(ctx, normalColor) {
+                const p0 = ctx.p0.parsed;
+                const p1 = ctx.p1.parsed;
+                if (p0 && p1) {
+                    const gap = p1.x - p0.x;
+                    if (gap > GAP_THRESHOLD) {
+                        return 'transparent';
                     }
                 }
+                return normalColor;
             }
-            insertGapBreaks(tempData);
-            insertGapBreaks(tempMinData);
-            insertGapBreaks(tempMaxData);
-            insertGapBreaks(windData);
-            insertGapBreaks(windMaxData);
 
             const chartOptions = {
                 responsive: true,
@@ -1233,8 +1227,7 @@
                 elements: {
                     point: { radius: 0, hoverRadius: 4, hoverBorderWidth: 2 },
                     line: { tension: 0.4, borderWidth: 2 }
-                },
-                spanGaps: false
+                }
             };
 
             // Temperature chart
@@ -1251,7 +1244,11 @@
                 borderColor: '#c8a46e',
                 backgroundColor: tempGradient,
                 fill: true,
-                pointHoverBackgroundColor: '#c8a46e'
+                pointHoverBackgroundColor: '#c8a46e',
+                segment: {
+                    borderColor: ctx => gapSegmentStyle(ctx, '#c8a46e'),
+                    backgroundColor: ctx => gapSegmentStyle(ctx, undefined)
+                }
             }];
 
             if (tempMinData.length > 0 && currentRange !== '24h') {
@@ -1261,7 +1258,8 @@
                     borderColor: 'rgba(126,158,181,0.35)',
                     borderWidth: 1,
                     borderDash: [4, 4],
-                    fill: false
+                    fill: false,
+                    segment: { borderColor: ctx => gapSegmentStyle(ctx, 'rgba(126,158,181,0.35)') }
                 });
                 tempDatasets.push({
                     label: 'Max',
@@ -1269,7 +1267,8 @@
                     borderColor: 'rgba(200,164,110,0.35)',
                     borderWidth: 1,
                     borderDash: [4, 4],
-                    fill: false
+                    fill: false,
+                    segment: { borderColor: ctx => gapSegmentStyle(ctx, 'rgba(200,164,110,0.35)') }
                 });
             }
 
@@ -1302,7 +1301,11 @@
                 borderColor: '#9ab07d',
                 backgroundColor: windGradient,
                 fill: true,
-                pointHoverBackgroundColor: '#9ab07d'
+                pointHoverBackgroundColor: '#9ab07d',
+                segment: {
+                    borderColor: ctx => gapSegmentStyle(ctx, '#9ab07d'),
+                    backgroundColor: ctx => gapSegmentStyle(ctx, undefined)
+                }
             }];
 
             if (windMaxData.length > 0 && currentRange !== '24h') {
@@ -1312,7 +1315,8 @@
                     borderColor: 'rgba(181,160,138,0.35)',
                     borderWidth: 1,
                     borderDash: [4, 4],
-                    fill: false
+                    fill: false,
+                    segment: { borderColor: ctx => gapSegmentStyle(ctx, 'rgba(181,160,138,0.35)') }
                 });
             }
 
