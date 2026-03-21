@@ -1155,7 +1155,9 @@
             }
 
             const now = new Date();
-            const GAP_THRESHOLD = 5 * 60 * 1000;
+            // For 24h: minute-level history data, so 15min gap = missing data.
+            // For longer ranges: hourly data (1h intervals), so 3h gap = genuinely missing hours.
+            const GAP_THRESHOLD = currentRange === '24h' ? 15 * 60 * 1000 : 3 * 60 * 60 * 1000;
 
             // Insert null points to break the line where data gaps exist.
             // Chart.js with spanGaps:false will not draw lines across null values.
