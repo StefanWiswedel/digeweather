@@ -867,10 +867,12 @@
             return weatherIcons[base] || '◯';
         }
 
-        // Relative time display
+        // Relative time display + status freshness
         function updateRelativeTime() {
             if (!lastUpdateTime) return;
             const el = document.getElementById('timestamp');
+            const pip = document.getElementById('status-pip');
+            const statusText = document.getElementById('status-text');
             const now = Date.now();
             const diff = Math.floor((now - lastUpdateTime) / 1000);
 
@@ -893,6 +895,16 @@
 
             el.textContent = text;
             el.className = cssClass;
+
+            // Update status based on data freshness, not just API reachability
+            // Data older than 5 min = stale (ESP32 pushes every ~60s)
+            if (diff > 300) {
+                pip.classList.add('offline');
+                statusText.textContent = 'Stale';
+            } else {
+                pip.classList.remove('offline');
+                statusText.textContent = 'Live';
+            }
         }
 
         async function fetchWeatherData() {
@@ -913,9 +925,6 @@
 
                 updateDisplay(data.current);
                 updateCharts();
-
-                document.getElementById('status-pip').classList.remove('offline');
-                document.getElementById('status-text').textContent = 'Live';
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('status-pip').classList.add('offline');
