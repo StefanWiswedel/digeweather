@@ -2,240 +2,312 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Copenhagen Weather Station</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0c0f13">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Digeweather — Copenhagen</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* Dark scientific palette */
-            --bg-primary: #0a0e14;
-            --bg-secondary: #0f1419;
-            --bg-card: #151b23;
-            --bg-elevated: #1a222c;
-            --border-subtle: #1e2832;
-            --border-active: #2a3744;
+            --bg-base: #0c0f13;
+            --bg-surface: #13161c;
+            --bg-raised: #1a1e26;
+            --bg-overlay: #21262f;
+            --bg-hover: #282e38;
 
-            /* Text */
-            --text-primary: #e6edf3;
-            --text-secondary: #8b949e;
-            --text-muted: #5c6670;
+            --border-dim: rgba(255,255,255,0.04);
+            --border-subtle: rgba(255,255,255,0.07);
+            --border-medium: rgba(255,255,255,0.12);
 
-            /* Data colors - scientific instrument */
-            --accent-primary: #00d4aa;
-            --accent-secondary: #58a6ff;
-            --temp-color: #00d4aa;
-            --humidity-color: #58a6ff;
-            --wind-color: #7ee787;
-            --rain-color: #79c0ff;
-            --pressure-color: #d2a8ff;
+            --text-primary: #eaeff5;
+            --text-secondary: #9ba4b0;
+            --text-tertiary: #5f6978;
+            --text-ghost: #3d4554;
 
-            /* Status */
-            --status-online: #3fb950;
-            --status-offline: #f85149;
-            --status-warning: #d29922;
+            --accent: #4fd1c5;
+            --accent-muted: rgba(79,209,197,0.12);
+            --accent-subtle: rgba(79,209,197,0.06);
 
-            --border-radius: 6px;
-            --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
-            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --clr-temp: #4fd1c5;
+            --clr-humidity: #63b3ed;
+            --clr-wind: #9ae6b4;
+            --clr-rain: #90cdf4;
+            --clr-gust: #d6bcfa;
+
+            --status-ok: #68d391;
+            --status-err: #fc8181;
+            --status-warn: #f6e05e;
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+
+            --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-mono: 'Space Mono', 'SF Mono', 'Fira Code', monospace;
+
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            scroll-behavior: smooth;
+            -webkit-text-size-adjust: 100%;
         }
 
         body {
-            font-family: var(--font-sans);
-            background: var(--bg-primary);
+            font-family: var(--font-body);
+            background: var(--bg-base);
             color: var(--text-primary);
             min-height: 100vh;
-            padding: 16px;
+            min-height: 100dvh;
             line-height: 1.5;
             -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            padding: env(safe-area-inset-top) 0 0;
+            overflow-x: hidden;
         }
 
-        .container {
-            max-width: 900px;
+        /* Ambient glow */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -120px;
+            left: 50%;
+            translate: -50% 0;
+            width: 600px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(79,209,197,0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app {
+            position: relative;
+            z-index: 1;
+            max-width: 480px;
             margin: 0 auto;
+            padding: 0 16px 32px;
         }
 
-        /* Header */
-        header {
+        /* ---------- HEADER ---------- */
+        .header {
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            align-items: flex-start;
-            padding: 8px 0 24px;
-            border-bottom: 1px solid var(--border-subtle);
-            margin-bottom: 24px;
+            padding: 20px 0 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: linear-gradient(to bottom, var(--bg-base) 60%, transparent);
+            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
         }
 
-        .station-info h1 {
-            font-size: 0.75rem;
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .station-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-sm);
+            background: var(--accent-muted);
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+        }
+
+        .station-icon svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--accent);
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .header-title {
+            font-size: 0.9375rem;
             font-weight: 500;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 4px;
-        }
-
-        .station-info .location {
-            font-family: var(--font-mono);
-            font-size: 1.25rem;
-            font-weight: 400;
+            letter-spacing: -0.01em;
             color: var(--text-primary);
         }
 
-        .status-info {
-            text-align: right;
-            font-size: 0.75rem;
-            color: var(--text-muted);
+        .header-subtitle {
+            font-size: 0.6875rem;
+            color: var(--text-tertiary);
+            font-weight: 400;
         }
 
-        .status-info .timestamp {
-            font-family: var(--font-mono);
-            color: var(--text-secondary);
-        }
-
-        .status-row {
+        .header-right {
             display: flex;
             align-items: center;
-            justify-content: flex-end;
-            gap: 6px;
-            margin-top: 4px;
+            gap: 8px;
         }
 
-        .status-dot {
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.6875rem;
+            font-family: var(--font-mono);
+            color: var(--text-tertiary);
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            padding: 4px 10px;
+            border-radius: 100px;
+        }
+
+        .status-pip {
             width: 6px;
             height: 6px;
             border-radius: 50%;
+            background: var(--status-ok);
+            box-shadow: 0 0 6px var(--status-ok);
+            transition: all 0.3s ease;
         }
 
-        .status-dot.online { background: var(--status-online); box-shadow: 0 0 8px var(--status-online); }
-        .status-dot.offline { background: var(--status-offline); }
+        .status-pip.offline {
+            background: var(--status-err);
+            box-shadow: 0 0 6px var(--status-err);
+        }
 
-        .battery {
+        .battery-warn {
             font-family: var(--font-mono);
-            font-size: 0.6875rem;
-            color: var(--status-warning);
+            font-size: 0.5625rem;
+            color: var(--status-warn);
+            background: rgba(246,224,94,0.08);
+            padding: 3px 8px;
+            border-radius: 100px;
+            display: none;
         }
 
-        /* Current conditions - compact hero */
-        .current-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 24px;
-        }
+        .battery-warn.visible { display: inline-block; }
 
-        .current-primary {
-            grid-column: 1 / -1;
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--border-radius);
-            padding: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-        }
-
-        .temp-display {
+        /* ---------- HERO TEMPERATURE ---------- */
+        .hero {
             text-align: center;
+            padding: 28px 0 8px;
         }
 
-        .temp-value {
+        .hero-temp {
             font-family: var(--font-mono);
-            font-size: 4rem;
-            font-weight: 300;
-            color: var(--temp-color);
+            font-size: 5.5rem;
+            font-weight: 700;
+            color: var(--clr-temp);
             line-height: 1;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.04em;
+            position: relative;
+            display: inline-block;
         }
 
-        .temp-unit {
-            font-size: 1.5rem;
-            color: var(--text-muted);
-            font-weight: 300;
+        .hero-temp .unit {
+            font-size: 2rem;
+            font-weight: 400;
+            color: var(--text-ghost);
+            vertical-align: super;
+            margin-left: -4px;
         }
 
-        .temp-label {
-            font-size: 0.6875rem;
-            color: var(--text-muted);
+        .hero-condition {
+            font-size: 0.8125rem;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+            font-weight: 400;
+            letter-spacing: 0.04em;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+        }
+
+        .hero-time {
+            font-family: var(--font-mono);
+            font-size: 0.6875rem;
+            color: var(--text-ghost);
             margin-top: 8px;
         }
 
-        /* Stat cards */
-        .stat-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--border-radius);
-            padding: 16px;
+        /* ---------- METRIC STRIP ---------- */
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin: 20px 0;
         }
 
-        .stat-card .label {
-            font-size: 0.625rem;
-            color: var(--text-muted);
+        .metric {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            border-radius: var(--radius-md);
+            padding: 14px 10px 12px;
+            text-align: center;
+            transition: border-color 0.2s ease, transform 0.15s var(--ease-spring);
+        }
+
+        .metric:active {
+            transform: scale(0.97);
+        }
+
+        .metric-label {
+            font-size: 0.5625rem;
+            font-weight: 500;
+            color: var(--text-ghost);
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
-        .stat-card .value {
+        .metric-value {
             font-family: var(--font-mono);
-            font-size: 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .metric-value .unit {
+            font-size: 0.625rem;
             font-weight: 400;
-            color: var(--text-primary);
+            color: var(--text-ghost);
+            margin-left: 1px;
         }
 
-        .stat-card .value .unit {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-left: 2px;
-        }
-
-        .stat-card .sub {
+        .metric-sub {
             font-family: var(--font-mono);
-            font-size: 0.6875rem;
-            color: var(--text-muted);
+            font-size: 0.5625rem;
+            color: var(--text-ghost);
             margin-top: 4px;
         }
 
-        .stat-card.humidity .value { color: var(--humidity-color); }
-        .stat-card.wind .value { color: var(--wind-color); }
-        .stat-card.rain .value { color: var(--rain-color); }
+        .metric.humidity .metric-value { color: var(--clr-humidity); }
+        .metric.wind .metric-value { color: var(--clr-wind); }
+        .metric.gust .metric-value { color: var(--clr-gust); }
+        .metric.rain .metric-value { color: var(--clr-rain); }
 
-        /* Wind compass */
-        .wind-row {
+        /* Wind compass inside wind metric */
+        .compass-mini {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-top: 8px;
+            justify-content: center;
+            gap: 4px;
+            margin-top: 4px;
         }
 
-        .compass {
-            width: 32px;
-            height: 32px;
-            border: 1px solid var(--border-active);
+        .compass-ring {
+            width: 22px;
+            height: 22px;
+            border: 1px solid var(--border-medium);
             border-radius: 50%;
             position: relative;
-            background: var(--bg-secondary);
-        }
-
-        .compass::before {
-            content: '';
-            position: absolute;
-            top: 2px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 6px;
-            color: var(--text-muted);
+            background: var(--bg-raised);
         }
 
         .compass-needle {
@@ -243,531 +315,498 @@
             top: 50%;
             left: 50%;
             width: 2px;
-            height: 10px;
-            background: var(--wind-color);
+            height: 7px;
+            background: var(--clr-wind);
+            border-radius: 1px;
             transform-origin: bottom center;
             margin-left: -1px;
-            margin-top: -10px;
+            margin-top: -7px;
+            transition: transform 0.6s var(--ease-out);
         }
 
-        .compass-needle::after {
+        .compass-needle::before {
             content: '';
             position: absolute;
-            top: -3px;
-            left: -2px;
-            border-left: 3px solid transparent;
-            border-right: 3px solid transparent;
-            border-bottom: 5px solid var(--wind-color);
+            top: -2px;
+            left: -1.5px;
+            border-left: 2.5px solid transparent;
+            border-right: 2.5px solid transparent;
+            border-bottom: 4px solid var(--clr-wind);
         }
 
-        .wind-direction {
+        .compass-dir {
             font-family: var(--font-mono);
-            font-size: 0.75rem;
-            color: var(--text-secondary);
+            font-size: 0.5625rem;
+            color: var(--text-tertiary);
         }
 
-        /* Chart sections */
-        .chart-section {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--border-radius);
-            padding: 16px;
-            margin-bottom: 16px;
+        /* ---------- CHART CARDS ---------- */
+        .section-label {
+            font-size: 0.6875rem;
+            font-weight: 500;
+            color: var(--text-ghost);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 8px;
+            padding-left: 4px;
         }
 
-        .chart-header {
+        .chart-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            border-radius: var(--radius-lg);
+            padding: 16px 14px 12px;
+            margin-bottom: 12px;
+            transition: border-color 0.2s ease;
+        }
+
+        .chart-card:hover {
+            border-color: var(--border-subtle);
+        }
+
+        .chart-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
         }
 
-        .chart-section h2 {
-            font-size: 0.6875rem;
+        .chart-title {
+            font-size: 0.8125rem;
             font-weight: 500;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
+            color: var(--text-secondary);
         }
 
-        .time-controls {
+        .range-group {
             display: flex;
-            gap: 2px;
-            background: var(--bg-secondary);
+            background: var(--bg-raised);
+            border-radius: var(--radius-sm);
             padding: 2px;
-            border-radius: 4px;
+            gap: 1px;
         }
 
         .range-btn {
             font-family: var(--font-mono);
+            font-size: 0.625rem;
+            font-weight: 400;
             background: transparent;
             border: none;
-            color: var(--text-muted);
-            padding: 4px 10px;
-            border-radius: 3px;
-            font-size: 0.6875rem;
+            color: var(--text-ghost);
+            padding: 5px 10px;
+            border-radius: 6px;
             cursor: pointer;
-            transition: all 0.1s;
+            transition: all 0.15s ease;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .range-btn:hover {
-            color: var(--text-secondary);
-        }
+        .range-btn:hover { color: var(--text-tertiary); }
 
         .range-btn.active {
-            background: var(--bg-elevated);
-            color: var(--accent-primary);
+            background: var(--bg-overlay);
+            color: var(--accent);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
 
-        .chart-container {
-            height: 160px;
+        .chart-area {
+            height: 140px;
+            position: relative;
         }
 
-        /* Forecast section - VERTICAL layout */
-        .forecast-section {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--border-radius);
-            padding: 16px;
-            margin-bottom: 16px;
-        }
-
-        .forecast-section h2 {
-            font-size: 0.6875rem;
-            font-weight: 500;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 12px;
+        /* ---------- FORECAST ---------- */
+        .forecast-block {
+            margin-top: 28px;
         }
 
         .forecast-list {
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 4px;
         }
 
         .forecast-row {
             display: grid;
-            grid-template-columns: 80px 32px 1fr 60px 50px;
-            gap: 12px;
+            grid-template-columns: 56px 30px 1fr 50px;
+            gap: 8px;
             align-items: center;
-            padding: 10px 12px;
-            background: var(--bg-secondary);
-            border-radius: 4px;
+            padding: 12px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            border-radius: var(--radius-md);
             cursor: pointer;
-            transition: background 0.1s;
+            transition: all 0.15s ease;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .forecast-row:hover {
-            background: var(--bg-elevated);
-        }
+        .forecast-row:hover { background: var(--bg-raised); }
 
         .forecast-row.expanded {
-            background: var(--bg-elevated);
-            border: 1px solid var(--border-active);
+            background: var(--bg-raised);
+            border-color: var(--border-medium);
         }
 
-        .forecast-row .day {
-            font-family: var(--font-mono);
-            font-size: 0.75rem;
+        .fc-day {
+            font-size: 0.8125rem;
+            font-weight: 500;
             color: var(--text-secondary);
+            line-height: 1.2;
         }
 
-        .forecast-row .day .date {
+        .fc-day .fc-date {
             font-size: 0.625rem;
-            color: var(--text-muted);
+            color: var(--text-ghost);
+            font-weight: 400;
             display: block;
         }
 
-        .forecast-row .icon {
-            font-size: 1.125rem;
+        .fc-icon {
+            font-size: 1.25rem;
             text-align: center;
         }
 
-        .forecast-row .hourly-preview {
+        .fc-preview {
             display: flex;
-            gap: 4px;
+            gap: 3px;
             overflow: hidden;
+            mask-image: linear-gradient(to right, black 80%, transparent);
+            -webkit-mask-image: linear-gradient(to right, black 80%, transparent);
         }
 
-        .hour-pip {
+        .fc-pip {
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-width: 28px;
-            padding: 4px 2px;
-            background: var(--bg-card);
-            border-radius: 3px;
+            min-width: 26px;
+            padding: 3px 2px;
+            background: var(--bg-raised);
+            border-radius: 6px;
+            gap: 1px;
         }
 
-        .hour-pip .time {
+        .fc-pip .pip-time {
             font-family: var(--font-mono);
             font-size: 0.5rem;
-            color: var(--text-muted);
+            color: var(--text-ghost);
         }
 
-        .hour-pip .pip-icon {
-            font-size: 0.625rem;
-            margin: 2px 0;
-        }
+        .fc-pip .pip-icon { font-size: 0.625rem; }
 
-        .hour-pip .pip-temp {
+        .fc-pip .pip-temp {
             font-family: var(--font-mono);
             font-size: 0.5625rem;
-            color: var(--text-secondary);
+            color: var(--text-tertiary);
         }
 
-        .hour-pip.now {
-            background: var(--border-active);
+        .fc-pip.now {
+            background: var(--accent-muted);
         }
 
-        .hour-pip.now .pip-temp {
-            color: var(--accent-primary);
-        }
+        .fc-pip.now .pip-temp { color: var(--accent); }
 
-        .forecast-row .temp-range {
+        .fc-temps {
+            text-align: right;
             font-family: var(--font-mono);
             font-size: 0.8125rem;
-            text-align: right;
         }
 
-        .forecast-row .temp-high {
-            color: var(--text-primary);
-        }
+        .fc-high { color: var(--text-primary); font-weight: 700; }
+        .fc-low { color: var(--text-ghost); margin-left: 3px; }
 
-        .forecast-row .temp-low {
-            color: var(--text-muted);
-            margin-left: 4px;
-        }
-
-        .forecast-row .precip {
+        .fc-precip {
             font-family: var(--font-mono);
             font-size: 0.6875rem;
-            color: var(--rain-color);
+            color: var(--clr-rain);
             text-align: right;
         }
 
-        /* Expanded forecast details */
-        .forecast-details {
+        /* Expanded details */
+        .fc-details {
             display: none;
             grid-column: 1 / -1;
             margin-top: 12px;
             padding-top: 12px;
-            border-top: 1px solid var(--border-subtle);
+            border-top: 1px solid var(--border-dim);
         }
 
-        .forecast-row.expanded .forecast-details {
-            display: block;
-        }
+        .forecast-row.expanded .fc-details { display: block; }
 
-        .hourly-full {
+        .fc-hourly-scroll {
             display: flex;
             gap: 4px;
             overflow-x: auto;
-            padding-bottom: 8px;
+            padding-bottom: 6px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--bg-overlay) transparent;
         }
 
-        .hourly-full::-webkit-scrollbar {
-            height: 3px;
-        }
+        .fc-hourly-scroll::-webkit-scrollbar { height: 3px; }
+        .fc-hourly-scroll::-webkit-scrollbar-track { background: transparent; }
+        .fc-hourly-scroll::-webkit-scrollbar-thumb { background: var(--bg-overlay); border-radius: 2px; }
 
-        .hourly-full::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-        }
-
-        .hourly-full::-webkit-scrollbar-thumb {
-            background: var(--border-active);
-            border-radius: 2px;
-        }
-
-        .hour-block {
+        .fc-hour {
             flex: 0 0 auto;
             text-align: center;
             padding: 8px 6px;
-            min-width: 48px;
-            background: var(--bg-card);
-            border-radius: 4px;
+            min-width: 50px;
+            background: var(--bg-overlay);
+            border-radius: var(--radius-sm);
         }
 
-        .hour-block.now {
-            background: var(--border-active);
-            border: 1px solid var(--accent-primary);
+        .fc-hour.now {
+            background: var(--accent-muted);
+            border: 1px solid rgba(79,209,197,0.2);
         }
 
-        .hour-block .hour-time {
+        .fc-hour .h-time {
             font-family: var(--font-mono);
             font-size: 0.5625rem;
-            color: var(--text-muted);
+            color: var(--text-ghost);
             margin-bottom: 4px;
         }
 
-        .hour-block .hour-icon {
-            font-size: 1rem;
-            margin-bottom: 4px;
-        }
+        .fc-hour .h-icon { font-size: 1rem; margin-bottom: 3px; }
 
-        .hour-block .hour-temp {
+        .fc-hour .h-temp {
             font-family: var(--font-mono);
             font-size: 0.75rem;
             color: var(--text-primary);
+            font-weight: 700;
         }
 
-        .hour-block .hour-precip {
+        .fc-hour .h-precip {
             font-family: var(--font-mono);
             font-size: 0.5rem;
-            color: var(--rain-color);
+            color: var(--clr-rain);
             margin-top: 2px;
         }
 
-        .day-stats {
+        .fc-day-stats {
             display: flex;
-            gap: 24px;
-            margin-top: 12px;
+            gap: 20px;
+            margin-top: 10px;
             font-size: 0.6875rem;
+            color: var(--text-ghost);
         }
 
-        .day-stats span {
-            color: var(--text-muted);
-        }
-
-        .day-stats .val {
+        .fc-day-stats .val {
             font-family: var(--font-mono);
-            color: var(--text-secondary);
+            color: var(--text-tertiary);
             margin-left: 4px;
         }
 
-        /* Footer */
-        footer {
+        /* ---------- FOOTER ---------- */
+        .foot {
             text-align: center;
-            padding: 24px 0;
+            padding: 28px 0 16px;
             font-size: 0.6875rem;
-            color: var(--text-muted);
-            border-top: 1px solid var(--border-subtle);
-            margin-top: 24px;
+            color: var(--text-ghost);
         }
 
-        footer a {
-            color: var(--text-secondary);
+        .foot a {
+            color: var(--text-tertiary);
             text-decoration: none;
+            transition: color 0.15s ease;
         }
 
-        footer a:hover {
-            color: var(--accent-secondary);
+        .foot a:hover { color: var(--accent); }
+
+        .foot-hardware {
+            font-family: var(--font-mono);
+            font-size: 0.5625rem;
+            color: var(--text-ghost);
+            margin-top: 4px;
         }
 
-        /* Loading */
-        .loading {
+        /* ---------- LOADING ---------- */
+        .loading-state {
             font-family: var(--font-mono);
             font-size: 0.75rem;
-            color: var(--text-muted);
-            padding: 24px;
+            color: var(--text-ghost);
+            padding: 32px;
             text-align: center;
         }
 
-        @keyframes pulse {
+        @keyframes breathe {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
         }
 
-        .loading-pulse {
-            animation: pulse 1.5s ease-in-out infinite;
+        .loading-state.pulse { animation: breathe 1.8s ease-in-out infinite; }
+
+        /* ---------- ENTRANCE ANIMATIONS ---------- */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Mobile-first: hide hourly preview, show vertical expanded */
+        .hero { animation: fadeUp 0.6s var(--ease-out) both; animation-delay: 0.1s; }
+        .metrics { animation: fadeUp 0.6s var(--ease-out) both; animation-delay: 0.2s; }
+        .charts-section { animation: fadeUp 0.6s var(--ease-out) both; animation-delay: 0.3s; }
+        .forecast-block { animation: fadeUp 0.6s var(--ease-out) both; animation-delay: 0.4s; }
+
+        /* ---------- RESPONSIVE ---------- */
+
+        /* Small phones */
+        @media (max-width: 359px) {
+            .metrics { grid-template-columns: repeat(2, 1fr); }
+            .hero-temp { font-size: 4rem; }
+        }
+
+        /* Mobile (default, already mobile-first) */
         @media (max-width: 639px) {
+            .fc-preview { display: none; }
+
             .forecast-row {
-                grid-template-columns: 70px 28px 1fr 50px;
-                padding: 12px;
+                grid-template-columns: 56px 30px 1fr 50px;
             }
 
-            .forecast-row .hourly-preview {
-                display: none;
-            }
-
-            .forecast-row .precip {
-                display: none;
-            }
-
-            .forecast-row .temp-range {
-                font-size: 0.875rem;
-            }
-
-            .forecast-row .icon {
-                font-size: 1.25rem;
-            }
-
-            /* Vertical hourly grid on mobile */
-            .hourly-full {
+            .fc-hourly-scroll {
                 display: grid;
                 grid-template-columns: repeat(4, 1fr);
-                gap: 8px;
+                gap: 6px;
                 overflow-x: visible;
             }
 
-            .hour-block {
+            .fc-hour {
                 min-width: unset;
                 padding: 10px 4px;
             }
 
-            .hour-block .hour-time {
-                font-size: 0.625rem;
-            }
-
-            .hour-block .hour-icon {
-                font-size: 1.125rem;
-            }
-
-            .hour-block .hour-temp {
-                font-size: 0.875rem;
-            }
-
-            .hour-block .hour-precip {
-                font-size: 0.5625rem;
-            }
-
-            .day-stats {
-                flex-wrap: wrap;
-                gap: 12px;
-            }
+            .fc-hour .h-icon { font-size: 1.125rem; }
+            .fc-hour .h-temp { font-size: 0.875rem; }
+            .fc-day-stats { flex-wrap: wrap; gap: 10px; }
         }
 
-        /* Tablet and up */
+        /* Tablet+ */
         @media (min-width: 640px) {
-            body {
-                padding: 24px;
+            .app {
+                max-width: 540px;
+                padding: 0 24px 48px;
             }
 
-            .current-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-
-            .current-primary {
-                grid-column: span 2;
-            }
-
-            .temp-value {
-                font-size: 5rem;
-            }
-
-            .chart-container {
-                height: 200px;
-            }
+            .hero-temp { font-size: 6.5rem; }
+            .chart-area { height: 180px; }
 
             .forecast-row {
-                grid-template-columns: 100px 36px 1fr 80px 60px;
-            }
-        }
-
-        @media (min-width: 800px) {
-            .forecast-row .hourly-preview {
-                gap: 6px;
+                grid-template-columns: 70px 34px 1fr 60px 50px;
             }
 
-            .hour-pip {
-                min-width: 36px;
-            }
+            .fc-precip-col { display: block; }
         }
+
+        /* Desktop */
+        @media (min-width: 900px) {
+            .app { max-width: 600px; }
+            .chart-area { height: 200px; }
+        }
+
+        /* ---- Dark scrollbar ---- */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--bg-overlay); border-radius: 2px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="station-info">
-                <h1>Weather Station</h1>
-                <div class="location">Copenhagen, Denmark</div>
-            </div>
-            <div class="status-info">
-                <div>Last update</div>
-                <div class="timestamp" id="timestamp">--:--:--</div>
-                <div class="status-row">
-                    <span class="status-dot online" id="status-dot"></span>
-                    <span id="status-text">Online</span>
-                    <span class="battery" id="battery"></span>
+    <div class="app">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-left">
+                <div class="station-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 2v6m0 0a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm-6.93 3.07L6.34 12.34m9.32-9.32L14.34 4.34M2 12h2m16 0h2m-4.93 6.93-1.27-1.27M6.34 17.66l-1.27 1.27"/></svg>
+                </div>
+                <div>
+                    <div class="header-title">Copenhagen</div>
+                    <div class="header-subtitle">Digeweather Station</div>
                 </div>
             </div>
-        </header>
-
-        <div class="current-grid">
-            <div class="current-primary">
-                <div class="temp-display">
-                    <div class="temp-value"><span id="temp">--</span><span class="temp-unit">°C</span></div>
-                    <div class="temp-label" id="condition">Loading</div>
+            <div class="header-right">
+                <span class="battery-warn" id="battery">LOW BAT</span>
+                <div class="status-badge">
+                    <span class="status-pip" id="status-pip"></span>
+                    <span id="status-text">Live</span>
                 </div>
             </div>
+        </div>
 
-            <div class="stat-card humidity">
-                <div class="label">Humidity</div>
-                <div class="value"><span id="humidity">--</span><span class="unit">%</span></div>
+        <!-- HERO -->
+        <div class="hero">
+            <div class="hero-temp"><span id="temp">--</span><span class="unit">°</span></div>
+            <div class="hero-condition" id="condition">Loading</div>
+            <div class="hero-time">Updated <span id="timestamp">--:--</span></div>
+        </div>
+
+        <!-- METRICS -->
+        <div class="metrics">
+            <div class="metric humidity">
+                <div class="metric-label">Humidity</div>
+                <div class="metric-value"><span id="humidity">--</span><span class="unit">%</span></div>
             </div>
-
-            <div class="stat-card wind">
-                <div class="label">Wind</div>
-                <div class="value"><span id="wind">--</span><span class="unit">m/s</span></div>
-                <div class="wind-row">
-                    <div class="compass">
+            <div class="metric wind">
+                <div class="metric-label">Wind</div>
+                <div class="metric-value"><span id="wind">--</span><span class="unit">m/s</span></div>
+                <div class="compass-mini">
+                    <div class="compass-ring">
                         <div class="compass-needle" id="compass-arrow"></div>
                     </div>
-                    <span class="wind-direction" id="wind-dir">--</span>
+                    <span class="compass-dir" id="wind-dir">--</span>
                 </div>
             </div>
-
-            <div class="stat-card wind">
-                <div class="label">Gust</div>
-                <div class="value"><span id="gust">--</span><span class="unit">m/s</span></div>
+            <div class="metric gust">
+                <div class="metric-label">Gust</div>
+                <div class="metric-value"><span id="gust">--</span><span class="unit">m/s</span></div>
             </div>
-
-            <div class="stat-card rain">
-                <div class="label">Rain 24h</div>
-                <div class="value"><span id="rain">--</span><span class="unit">mm</span></div>
-                <div class="sub">1h: <span id="rain-hour">--</span>mm</div>
+            <div class="metric rain">
+                <div class="metric-label">Rain 24h</div>
+                <div class="metric-value"><span id="rain">--</span><span class="unit">mm</span></div>
+                <div class="metric-sub">1h: <span id="rain-hour">--</span>mm</div>
             </div>
         </div>
 
-        <div class="chart-section">
-            <div class="chart-header">
-                <h2>Temperature</h2>
-                <div class="time-controls">
-                    <button class="range-btn active" data-range="24h">24H</button>
-                    <button class="range-btn" data-range="7d">7D</button>
-                    <button class="range-btn" data-range="30d">30D</button>
-                    <button class="range-btn" data-range="1y">1Y</button>
-                    <button class="range-btn" data-range="all">ALL</button>
+        <!-- CHARTS -->
+        <div class="charts-section">
+            <div class="section-label">History</div>
+
+            <div class="chart-card">
+                <div class="chart-top">
+                    <div class="chart-title">Temperature</div>
+                    <div class="range-group">
+                        <button class="range-btn active" data-range="24h">24H</button>
+                        <button class="range-btn" data-range="7d">7D</button>
+                        <button class="range-btn" data-range="30d">30D</button>
+                        <button class="range-btn" data-range="1y">1Y</button>
+                        <button class="range-btn" data-range="all">ALL</button>
+                    </div>
                 </div>
+                <div class="chart-area"><canvas id="tempChart"></canvas></div>
             </div>
-            <div class="chart-container">
-                <canvas id="tempChart"></canvas>
+
+            <div class="chart-card">
+                <div class="chart-top">
+                    <div class="chart-title">Wind Speed</div>
+                </div>
+                <div class="chart-area"><canvas id="windChart"></canvas></div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-top">
+                    <div class="chart-title">Rainfall</div>
+                </div>
+                <div class="chart-area"><canvas id="rainChart"></canvas></div>
             </div>
         </div>
 
-        <div class="chart-section">
-            <div class="chart-header">
-                <h2>Wind Speed</h2>
-            </div>
-            <div class="chart-container">
-                <canvas id="windChart"></canvas>
-            </div>
-        </div>
-
-        <div class="chart-section">
-            <div class="chart-header">
-                <h2>Rainfall</h2>
-            </div>
-            <div class="chart-container">
-                <canvas id="rainChart"></canvas>
-            </div>
-        </div>
-
-        <div class="forecast-section">
-            <h2>10-Day Forecast</h2>
+        <!-- FORECAST -->
+        <div class="forecast-block">
+            <div class="section-label">10-Day Forecast</div>
             <div class="forecast-list" id="forecast">
-                <div class="loading loading-pulse">Loading forecast data...</div>
+                <div class="loading-state pulse">Loading forecast...</div>
             </div>
         </div>
 
-        <footer>
-            <p>Bresser 5-in-1 via ESP32 + CC1101 · Forecast by <a href="https://www.met.no/" target="_blank">MET Norway</a></p>
-        </footer>
+        <!-- FOOTER -->
+        <div class="foot">
+            <div>Forecast by <a href="https://www.met.no/" target="_blank" rel="noopener">MET Norway</a></div>
+            <div class="foot-hardware">Bresser 5-in-1 · ESP32 + CC1101</div>
+        </div>
     </div>
 
     <script>
@@ -791,7 +830,6 @@
 
         let currentRange = '24h';
 
-        // Weather symbols - minimal text-based for scientific look
         const weatherIcons = {
             'clearsky': '☀',
             'fair': '🌤',
@@ -801,6 +839,8 @@
             'lightrain': '🌦',
             'heavyrain': '🌧',
             'rainshowers': '🌦',
+            'lightrainshowers': '🌦',
+            'heavyrainshowers': '🌧',
             'sleet': '🌨',
             'snow': '❄',
             'snowshowers': '🌨',
@@ -833,11 +873,11 @@
                 updateDisplay(data.current);
                 updateCharts();
 
-                document.getElementById('status-dot').className = 'status-dot online';
-                document.getElementById('status-text').textContent = 'Online';
+                document.getElementById('status-pip').classList.remove('offline');
+                document.getElementById('status-text').textContent = 'Live';
             } catch (error) {
                 console.error('Error:', error);
-                document.getElementById('status-dot').className = 'status-dot offline';
+                document.getElementById('status-pip').classList.add('offline');
                 document.getElementById('status-text').textContent = 'Offline';
             }
         }
@@ -845,7 +885,6 @@
         function updateDisplay(current) {
             if (!current) return;
 
-            // Timestamp - show just time
             const ts = current.timestamp || '--';
             document.getElementById('timestamp').textContent = ts.split(' ')[1] || ts;
 
@@ -881,9 +920,9 @@
 
             const batteryEl = document.getElementById('battery');
             if (current.battery === 'LOW') {
-                batteryEl.textContent = 'LOW BAT';
+                batteryEl.classList.add('visible');
             } else {
-                batteryEl.textContent = '';
+                batteryEl.classList.remove('visible');
             }
         }
 
@@ -932,10 +971,8 @@
             document.getElementById('rain-hour').textContent = rainLastHour.toFixed(1);
         }
 
-        // Helper to parse timestamps
         function parseTimestamp(ts) {
             if (!ts) return null;
-            // Handle "YYYY-MM-DD HH:MM:SS" or "YYYY-MM-DD HH" formats
             const parts = ts.split(' ');
             const dateParts = parts[0].split('-');
             const timeParts = (parts[1] || '00:00:00').split(':');
@@ -949,7 +986,6 @@
             );
         }
 
-        // Get time range boundaries
         function getTimeRange(range) {
             const now = new Date();
             let minTime, unit, displayFormat;
@@ -977,7 +1013,7 @@
                     break;
                 case 'all':
                 default:
-                    minTime = null; // Will be set from data
+                    minTime = null;
                     unit = 'month';
                     displayFormat = 'MMM yyyy';
                     break;
@@ -989,7 +1025,6 @@
         function updateCharts() {
             const { minTime, maxTime, unit, displayFormat } = getTimeRange(currentRange);
 
-            // Prepare data arrays as {x: Date, y: value} pairs
             let tempData = [];
             let tempMinData = [];
             let tempMaxData = [];
@@ -997,20 +1032,15 @@
             let windMaxData = [];
             let rainData = [];
 
-            // For 24h view, combine hourly data (older) with minute data (recent)
-            // For other ranges, use hourly data only
             if (currentRange === '24h') {
-                // Find the time range covered by minute-level history
                 const historyStart = weatherData.history.length > 0
                     ? parseTimestamp(weatherData.history[0].timestamp)
                     : null;
 
-                // Add hourly data for the period before minute data starts
                 for (const entry of weatherData.hourly) {
                     const timestamp = parseTimestamp(entry.hour);
                     if (!timestamp) continue;
                     if (minTime && timestamp < minTime) continue;
-                    // Skip hourly entries that overlap with minute data
                     if (historyStart && timestamp >= historyStart) continue;
 
                     if (entry.tempAvg !== undefined) tempData.push({ x: timestamp, y: entry.tempAvg });
@@ -1018,7 +1048,6 @@
                     if (entry.rainDelta !== undefined) rainData.push({ x: timestamp, y: Math.max(0, entry.rainDelta) });
                 }
 
-                // Add minute-level history data
                 const maxPoints = 200;
                 const sampleRate = Math.max(1, Math.floor(weatherData.history.length / maxPoints));
                 const hourlyRainMap = {};
@@ -1033,7 +1062,6 @@
                     if (entry.windSpeed !== undefined) windData.push({ x: timestamp, y: entry.windSpeed });
                 }
 
-                // Build hourly rain aggregates from minute data
                 for (const entry of weatherData.history) {
                     if (entry.rain !== undefined && entry.rain >= 0) {
                         const hourKey = entry.timestamp?.substring(0, 13) || '';
@@ -1053,7 +1081,6 @@
                 rainData = rainData.concat(minuteRain);
                 rainData.sort((a, b) => a.x - b.x);
             } else {
-                // For 7d, 30d, 1y, all — use hourly aggregated data
                 for (const entry of weatherData.hourly) {
                     const timestamp = parseTimestamp(entry.hour);
                     if (!timestamp) continue;
@@ -1068,17 +1095,33 @@
                 }
             }
 
-            // Determine actual min time for 'all' range
             let chartMinTime = minTime;
             if (!chartMinTime && tempData.length > 0) {
                 chartMinTime = tempData[0].x;
             }
 
-            // Base chart options with time scale
             const chartOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(19,22,28,0.95)',
+                        titleColor: '#9ba4b0',
+                        bodyColor: '#eaeff5',
+                        borderColor: 'rgba(255,255,255,0.08)',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        padding: 10,
+                        titleFont: { size: 10, family: "'Space Mono', monospace" },
+                        bodyFont: { size: 12, family: "'Space Mono', monospace" },
+                        displayColors: false
+                    }
+                },
                 scales: {
                     x: {
                         type: 'time',
@@ -1092,21 +1135,27 @@
                                 month: 'MMM'
                             }
                         },
-                        grid: { color: 'rgba(255, 255, 255, 0.03)' },
+                        grid: { color: 'rgba(255,255,255,0.02)', drawBorder: false },
                         ticks: {
-                            color: '#5c6670',
-                            maxTicksLimit: 8,
-                            font: { size: 10, family: "'JetBrains Mono', monospace" }
-                        }
+                            color: '#3d4554',
+                            maxTicksLimit: 6,
+                            font: { size: 9, family: "'Space Mono', monospace" }
+                        },
+                        border: { display: false }
                     },
                     y: {
-                        grid: { color: 'rgba(255, 255, 255, 0.03)' },
-                        ticks: { color: '#5c6670', font: { size: 10, family: "'JetBrains Mono', monospace" } }
+                        grid: { color: 'rgba(255,255,255,0.02)', drawBorder: false },
+                        ticks: {
+                            color: '#3d4554',
+                            font: { size: 9, family: "'Space Mono', monospace" },
+                            maxTicksLimit: 5
+                        },
+                        border: { display: false }
                     }
                 },
                 elements: {
-                    point: { radius: 0 },
-                    line: { tension: 0.3, borderWidth: 1.5 }
+                    point: { radius: 0, hoverRadius: 4, hoverBorderWidth: 2 },
+                    line: { tension: 0.4, borderWidth: 2 }
                 }
             };
 
@@ -1114,29 +1163,34 @@
             const tempCtx = document.getElementById('tempChart').getContext('2d');
             if (tempChart) tempChart.destroy();
 
+            const tempGradient = tempCtx.createLinearGradient(0, 0, 0, 140);
+            tempGradient.addColorStop(0, 'rgba(79,209,197,0.15)');
+            tempGradient.addColorStop(1, 'rgba(79,209,197,0)');
+
             const tempDatasets = [{
                 label: currentRange === '24h' ? 'Temperature' : 'Avg',
                 data: tempData,
-                borderColor: '#00d4aa',
-                backgroundColor: 'rgba(0, 212, 170, 0.05)',
-                fill: true
+                borderColor: '#4fd1c5',
+                backgroundColor: tempGradient,
+                fill: true,
+                pointHoverBackgroundColor: '#4fd1c5'
             }];
 
             if (tempMinData.length > 0 && currentRange !== '24h') {
                 tempDatasets.push({
                     label: 'Min',
                     data: tempMinData,
-                    borderColor: 'rgba(88, 166, 255, 0.4)',
+                    borderColor: 'rgba(99,179,237,0.3)',
                     borderWidth: 1,
-                    borderDash: [3, 3],
+                    borderDash: [4, 4],
                     fill: false
                 });
                 tempDatasets.push({
                     label: 'Max',
                     data: tempMaxData,
-                    borderColor: 'rgba(0, 212, 170, 0.4)',
+                    borderColor: 'rgba(79,209,197,0.3)',
                     borderWidth: 1,
-                    borderDash: [3, 3],
+                    borderDash: [4, 4],
                     fill: false
                 });
             }
@@ -1147,7 +1201,11 @@
                 options: {
                     ...chartOptions,
                     plugins: {
-                        legend: { display: tempMinData.length > 0 && currentRange !== '24h', labels: { color: '#5c6670', font: { size: 10 } } }
+                        ...chartOptions.plugins,
+                        legend: {
+                            display: tempMinData.length > 0 && currentRange !== '24h',
+                            labels: { color: '#5f6978', font: { size: 9, family: "'Space Mono', monospace" }, boxWidth: 12, padding: 8 }
+                        }
                     }
                 }
             });
@@ -1156,21 +1214,26 @@
             const windCtx = document.getElementById('windChart').getContext('2d');
             if (windChart) windChart.destroy();
 
+            const windGradient = windCtx.createLinearGradient(0, 0, 0, 140);
+            windGradient.addColorStop(0, 'rgba(154,230,180,0.12)');
+            windGradient.addColorStop(1, 'rgba(154,230,180,0)');
+
             const windDatasets = [{
                 label: currentRange === '24h' ? 'Wind' : 'Avg',
                 data: windData,
-                borderColor: '#7ee787',
-                backgroundColor: 'rgba(126, 231, 135, 0.05)',
-                fill: true
+                borderColor: '#9ae6b4',
+                backgroundColor: windGradient,
+                fill: true,
+                pointHoverBackgroundColor: '#9ae6b4'
             }];
 
             if (windMaxData.length > 0 && currentRange !== '24h') {
                 windDatasets.push({
                     label: 'Gust',
                     data: windMaxData,
-                    borderColor: 'rgba(210, 168, 255, 0.4)',
+                    borderColor: 'rgba(214,188,250,0.3)',
                     borderWidth: 1,
-                    borderDash: [3, 3],
+                    borderDash: [4, 4],
                     fill: false
                 });
             }
@@ -1181,7 +1244,11 @@
                 options: {
                     ...chartOptions,
                     plugins: {
-                        legend: { display: windMaxData.length > 0 && currentRange !== '24h', labels: { color: '#5c6670', font: { size: 10 } } }
+                        ...chartOptions.plugins,
+                        legend: {
+                            display: windMaxData.length > 0 && currentRange !== '24h',
+                            labels: { color: '#5f6978', font: { size: 9, family: "'Space Mono', monospace" }, boxWidth: 12, padding: 8 }
+                        }
                     }
                 }
             });
@@ -1196,11 +1263,12 @@
                     datasets: [{
                         label: 'Rain (mm)',
                         data: rainData,
-                        backgroundColor: 'rgba(121, 192, 255, 0.4)',
-                        borderColor: '#79c0ff',
+                        backgroundColor: 'rgba(144,205,244,0.35)',
+                        borderColor: 'rgba(144,205,244,0.6)',
                         borderWidth: 1,
-                        borderRadius: 2,
-                        barPercentage: 0.8
+                        borderRadius: 3,
+                        barPercentage: 0.7,
+                        hoverBackgroundColor: 'rgba(144,205,244,0.55)'
                     }]
                 },
                 options: {
@@ -1242,7 +1310,7 @@
             } catch (error) {
                 console.error('Forecast error:', error);
                 document.getElementById('forecast').innerHTML =
-                    '<div class="loading">Forecast unavailable</div>';
+                    '<div class="loading-state">Forecast unavailable</div>';
             }
         }
 
@@ -1269,7 +1337,6 @@
                     };
                 }
 
-                // Store hourly data (every 3 hours)
                 if (hour % 3 === 0 || (date === today && hour >= currentHour)) {
                     dailyForecasts[date].hourly.push({
                         hour: hour,
@@ -1314,27 +1381,25 @@
                                new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
                 const dateStr = new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-                // Preview hourly (first 6)
                 const previewHourly = f.hourly.slice(0, 6).map(h => {
                     const timeStr = h.hour.toString().padStart(2, '0');
                     return `
-                        <div class="hour-pip${h.isNow ? ' now' : ''}">
-                            <span class="time">${h.isNow ? 'NOW' : timeStr}</span>
+                        <div class="fc-pip${h.isNow ? ' now' : ''}">
+                            <span class="pip-time">${h.isNow ? 'NOW' : timeStr}</span>
                             <span class="pip-icon">${getWeatherIcon(h.symbol)}</span>
                             <span class="pip-temp">${Math.round(h.temp)}°</span>
                         </div>
                     `;
                 }).join('');
 
-                // Full hourly for expanded
                 const fullHourly = f.hourly.map(h => {
                     const timeStr = h.hour.toString().padStart(2, '0') + ':00';
-                    const precipHtml = h.precip > 0 ? `<div class="hour-precip">${h.precip.toFixed(1)}mm</div>` : '';
+                    const precipHtml = h.precip > 0 ? `<div class="h-precip">${h.precip.toFixed(1)}mm</div>` : '';
                     return `
-                        <div class="hour-block${h.isNow ? ' now' : ''}">
-                            <div class="hour-time">${h.isNow ? 'NOW' : timeStr}</div>
-                            <div class="hour-icon">${getWeatherIcon(h.symbol)}</div>
-                            <div class="hour-temp">${Math.round(h.temp)}°</div>
+                        <div class="fc-hour${h.isNow ? ' now' : ''}">
+                            <div class="h-time">${h.isNow ? 'NOW' : timeStr}</div>
+                            <div class="h-icon">${getWeatherIcon(h.symbol)}</div>
+                            <div class="h-temp">${Math.round(h.temp)}°</div>
                             ${precipHtml}
                         </div>
                     `;
@@ -1342,22 +1407,22 @@
 
                 return `
                     <div class="forecast-row" onclick="this.classList.toggle('expanded')">
-                        <div class="day">
+                        <div class="fc-day">
                             ${dayName}
-                            <span class="date">${dateStr}</span>
+                            <span class="fc-date">${dateStr}</span>
                         </div>
-                        <div class="icon">${getWeatherIcon(noon.symbol || 'cloudy')}</div>
-                        <div class="hourly-preview">${previewHourly}</div>
-                        <div class="temp-range">
-                            <span class="temp-high">${Math.round(f.tempMax)}°</span>
-                            <span class="temp-low">${Math.round(f.tempMin)}°</span>
+                        <div class="fc-icon">${getWeatherIcon(noon.symbol || 'cloudy')}</div>
+                        <div class="fc-preview">${previewHourly}</div>
+                        <div class="fc-temps">
+                            <span class="fc-high">${Math.round(f.tempMax)}°</span>
+                            <span class="fc-low">${Math.round(f.tempMin)}°</span>
                         </div>
-                        <div class="precip">${f.totalPrecip > 0.1 ? f.totalPrecip.toFixed(1) + 'mm' : '—'}</div>
-                        <div class="forecast-details">
-                            <div class="hourly-full">${fullHourly}</div>
-                            <div class="day-stats">
+                        <div class="fc-details">
+                            <div class="fc-hourly-scroll">${fullHourly}</div>
+                            <div class="fc-day-stats">
                                 <span>Wind<span class="val">${noon.wind !== undefined ? noon.wind.toFixed(1) : '--'} m/s</span></span>
                                 <span>Humidity<span class="val">${noon.humidity !== undefined ? Math.round(noon.humidity) : '--'}%</span></span>
+                                <span>Precip<span class="val">${f.totalPrecip > 0.1 ? f.totalPrecip.toFixed(1) + 'mm' : '0mm'}</span></span>
                             </div>
                         </div>
                     </div>
