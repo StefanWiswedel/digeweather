@@ -1154,6 +1154,24 @@
                 chartMinTime = tempData[0].x;
             }
 
+            // If data is stale (>5 min gap to now), insert a null point
+            // after the last real data point to create a visible gap
+            const now = new Date();
+            function addGapIfStale(dataArr) {
+                if (dataArr.length === 0) return;
+                const lastPoint = dataArr[dataArr.length - 1];
+                const gapMs = now - lastPoint.x;
+                if (gapMs > 5 * 60 * 1000) {
+                    // Add a null point 1 minute after last real data
+                    dataArr.push({ x: new Date(lastPoint.x.getTime() + 60000), y: null });
+                }
+            }
+            addGapIfStale(tempData);
+            addGapIfStale(tempMinData);
+            addGapIfStale(tempMaxData);
+            addGapIfStale(windData);
+            addGapIfStale(windMaxData);
+
             const chartOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -1209,7 +1227,7 @@
                 },
                 elements: {
                     point: { radius: 0, hoverRadius: 4, hoverBorderWidth: 2 },
-                    line: { tension: 0.4, borderWidth: 2 }
+                    line: { tension: 0.4, borderWidth: 2, spanGaps: false }
                 }
             };
 
