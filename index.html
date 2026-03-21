@@ -1154,23 +1154,30 @@
                 chartMinTime = tempData[0].x;
             }
 
-            // If data is stale (>5 min gap to now), insert a null point
-            // after the last real data point to create a visible gap
+            // Insert null points wherever there's a gap > 5 min between
+            // consecutive data points (including gap to now at the end).
+            // This breaks the line so Chart.js doesn't draw through gaps.
             const now = new Date();
-            function addGapIfStale(dataArr) {
-                if (dataArr.length === 0) return;
-                const lastPoint = dataArr[dataArr.length - 1];
-                const gapMs = now - lastPoint.x;
-                if (gapMs > 5 * 60 * 1000) {
-                    // Add a null point 1 minute after last real data
-                    dataArr.push({ x: new Date(lastPoint.x.getTime() + 60000), y: null });
+            const GAP_THRESHOLD = 5 * 60 * 1000;
+
+            function insertGapNulls(dataArr) {
+                if (dataArr.length < 1) return;
+                // Walk backwards so insertions don't shift indices
+                for (let i = dataArr.length - 1; i >= 0; i--) {
+                    const nextTime = (i < dataArr.length - 1) ? dataArr[i + 1].x : now;
+                    const gapMs = nextTime - dataArr[i].x;
+                    if (gapMs > GAP_THRESHOLD) {
+                        // Insert a null 1 min after this point to break the line
+                        const nullPoint = { x: new Date(dataArr[i].x.getTime() + 60000), y: null };
+                        dataArr.splice(i + 1, 0, nullPoint);
+                    }
                 }
             }
-            addGapIfStale(tempData);
-            addGapIfStale(tempMinData);
-            addGapIfStale(tempMaxData);
-            addGapIfStale(windData);
-            addGapIfStale(windMaxData);
+            insertGapNulls(tempData);
+            insertGapNulls(tempMinData);
+            insertGapNulls(tempMaxData);
+            insertGapNulls(windData);
+            insertGapNulls(windMaxData);
 
             const chartOptions = {
                 responsive: true,
