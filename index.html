@@ -1147,6 +1147,7 @@
                     if (entry.windAvg !== undefined) windData.push({ x: timestamp, y: entry.windAvg });
                     if (entry.windMax !== undefined) windMaxData.push({ x: timestamp, y: entry.windMax });
                     if (entry.rainDelta !== undefined) rainData.push({ x: timestamp, y: Math.max(0, entry.rainDelta) });
+                    if (entry.humidityAvg !== undefined) humidityData.push({ x: timestamp, y: entry.humidityAvg });
                 }
             }
 
