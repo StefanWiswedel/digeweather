@@ -1156,27 +1156,41 @@
             }
 
             const now = new Date();
-            // For 24h: mix of hourly data (60min apart) + minute history. Use 90min so consecutive
-            // hourly points connect, but real multi-hour gaps still break the line.
-            // For longer ranges: hourly data (1h intervals), so 3h gap = genuinely missing hours.
-            const GAP_THRESHOLD = currentRange === '24h' ? 90 * 60 * 1000 : 3 * 60 * 60 * 1000;
 
             // Insert null points to break the line where data gaps exist.
-            // Chart.js with spanGaps:false will not draw lines across null values.
+            // Chart.js with spanGaps:false will not draw across nulls.
+            // We detect gaps by checking each interval against its NEIGHBOURS,
+            // not a global threshold. If an interval is >3× the previous or next
+            // normal interval, it's a gap. This handles mixed-granularity data
+            // (hourly aggregates at 60min + minute-by-minute history at ~1min).
             function insertGapBreaks(data) {
-                if (data.length < 2) return data;
-                // Sort by x first
+                if (data.length < 3) return data;
                 data.sort((a, b) => a.x - b.x);
+
+                // Get all intervals in ms
+                const times = data.map(d => d.x instanceof Date ? d.x.getTime() : d.x);
+                const intervals = [];
+                for (let i = 0; i < times.length - 1; i++) {
+                    intervals.push(times[i + 1] - times[i]);
+                }
+
+                // For each interval, decide if it's a gap by comparing to
+                // neighbouring intervals. An interval is a gap if it's >2× the
+                // interval before it AND >2× the interval after it.
+                // Edge intervals (first/last) compare only to their one neighbour.
+                const isGap = [];
+                for (let i = 0; i < intervals.length; i++) {
+                    const prev = i > 0 ? intervals[i - 1] : intervals[i + 1];
+                    const next = i < intervals.length - 1 ? intervals[i + 1] : intervals[i - 1];
+                    // It's a gap if significantly larger than both neighbours
+                    isGap.push(intervals[i] > prev * 2 && intervals[i] > next * 2);
+                }
+
                 const result = [];
                 for (let i = 0; i < data.length; i++) {
                     result.push(data[i]);
-                    if (i < data.length - 1) {
-                        const t0 = data[i].x instanceof Date ? data[i].x.getTime() : data[i].x;
-                        const t1 = data[i + 1].x instanceof Date ? data[i + 1].x.getTime() : data[i + 1].x;
-                        if (t1 - t0 > GAP_THRESHOLD) {
-                            // Insert a null point right after the last good point
-                            result.push({ x: new Date(t0 + 1000), y: null });
-                        }
+                    if (i < intervals.length && isGap[i]) {
+                        result.push({ x: new Date(times[i] + 1000), y: null });
                     }
                 }
                 return result;
