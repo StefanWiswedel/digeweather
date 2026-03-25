@@ -1101,6 +1101,7 @@
                     if (entry.tempAvg !== undefined) tempData.push({ x: timestamp, y: entry.tempAvg });
                     if (entry.windAvg !== undefined) windData.push({ x: timestamp, y: entry.windAvg });
                     if (entry.rainDelta !== undefined) rainData.push({ x: timestamp, y: Math.max(0, entry.rainDelta) });
+                    if (entry.humidityAvg !== undefined) humidityData.push({ x: timestamp, y: entry.humidityAvg });
                 }
 
                 const maxPoints = 200;
@@ -1367,18 +1368,23 @@
             const rainCtx = document.getElementById('rainChart').getContext('2d');
             if (rainChart) rainChart.destroy();
 
+            const rainGradient = rainCtx.createLinearGradient(0, 0, 0, 140);
+            rainGradient.addColorStop(0, 'rgba(126,158,181,0.20)');
+            rainGradient.addColorStop(1, 'rgba(126,158,181,0)');
+
             rainChart = new Chart(rainCtx, {
-                type: 'bar',
+                type: 'line',
                 data: {
                     datasets: [{
                         label: 'Rain (mm)',
                         data: rainData,
-                        backgroundColor: 'rgba(126,158,181,0.30)',
-                        borderColor: 'rgba(126,158,181,0.50)',
-                        borderWidth: 1,
-                        borderRadius: 3,
-                        barPercentage: 0.7,
-                        hoverBackgroundColor: 'rgba(126,158,181,0.45)'
+                        borderColor: '#7e9eb5',
+                        backgroundColor: rainGradient,
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        tension: 0.3,
+                        fill: true,
+                        spanGaps: false
                     }]
                 },
                 options: {
