@@ -1100,7 +1100,7 @@
 
                     if (entry.tempAvg !== undefined) tempData.push({ x: timestamp, y: entry.tempAvg });
                     if (entry.windAvg !== undefined) windData.push({ x: timestamp, y: entry.windAvg });
-                    if (entry.rainDelta !== undefined) rainData.push({ x: timestamp, y: Math.max(0, entry.rainDelta) || null });
+                    if (entry.rainDelta !== undefined) rainData.push({ x: timestamp, y: Math.max(0, entry.rainDelta) });
                     if (entry.humidityAvg !== undefined) humidityData.push({ x: timestamp, y: entry.humidityAvg });
                 }
 
@@ -1133,7 +1133,7 @@
                 }
                 const minuteRain = Object.values(hourlyRainMap).map(h => ({
                     x: h.time,
-                    y: Math.max(0, h.last - h.first) || null
+                    y: Math.max(0, h.last - h.first)
                 }));
                 rainData = rainData.concat(minuteRain);
                 rainData.sort((a, b) => a.x - b.x);
@@ -1148,7 +1148,7 @@
                     if (entry.tempMax !== undefined) tempMaxData.push({ x: timestamp, y: entry.tempMax });
                     if (entry.windAvg !== undefined) windData.push({ x: timestamp, y: entry.windAvg });
                     if (entry.windMax !== undefined) windMaxData.push({ x: timestamp, y: entry.windMax });
-                    if (entry.rainDelta !== undefined) rainData.push({ x: timestamp, y: Math.max(0, entry.rainDelta) || null });
+                    if (entry.rainDelta !== undefined) rainData.push({ x: timestamp, y: Math.max(0, entry.rainDelta) });
                     if (entry.humidityAvg !== undefined) humidityData.push({ x: timestamp, y: entry.humidityAvg });
                 }
             }
@@ -1206,6 +1206,21 @@
             windMaxData = insertGapBreaks(windMaxData);
             humidityData = insertGapBreaks(humidityData);
             rainData = insertGapBreaks(rainData);
+
+            // Keep a zero only when adjacent to a non-zero value (so the line
+            // drops gracefully to 0 or rises from 0). All other zeros become
+            // null so they render as gaps, not a flat baseline.
+            function processRainZeros(data) {
+                return data.map((pt, i) => {
+                    if (pt.y === null || pt.y > 0) return pt;
+                    const prev = data[i - 1];
+                    const next = data[i + 1];
+                    const prevNonZero = prev && prev.y !== null && prev.y > 0;
+                    const nextNonZero = next && next.y !== null && next.y > 0;
+                    return (prevNonZero || nextNonZero) ? pt : { x: pt.x, y: null };
+                });
+            }
+            rainData = processRainZeros(rainData);
 
             const chartOptions = {
                 responsive: true,
