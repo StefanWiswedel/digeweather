@@ -1205,6 +1205,7 @@
             windData = insertGapBreaks(windData);
             windMaxData = insertGapBreaks(windMaxData);
             humidityData = insertGapBreaks(humidityData);
+            rainData = insertGapBreaks(rainData);
 
             const chartOptions = {
                 responsive: true,
@@ -1369,7 +1370,7 @@
             if (rainChart) rainChart.destroy();
 
             const rainGradient = rainCtx.createLinearGradient(0, 0, 0, 140);
-            rainGradient.addColorStop(0, 'rgba(126,158,181,0.20)');
+            rainGradient.addColorStop(0, 'rgba(126,158,181,0.14)');
             rainGradient.addColorStop(1, 'rgba(126,158,181,0)');
 
             rainChart = new Chart(rainCtx, {
@@ -1380,10 +1381,8 @@
                         data: rainData,
                         borderColor: '#7e9eb5',
                         backgroundColor: rainGradient,
-                        borderWidth: 1.5,
-                        pointRadius: 0,
-                        tension: 0.3,
                         fill: true,
+                        pointHoverBackgroundColor: '#7e9eb5',
                         spanGaps: false
                     }]
                 },
@@ -1405,7 +1404,7 @@
             if (humidityChart) humidityChart.destroy();
 
             const humidityGradient = humidityCtx.createLinearGradient(0, 0, 0, 140);
-            humidityGradient.addColorStop(0, 'rgba(138,171,181,0.20)');
+            humidityGradient.addColorStop(0, 'rgba(138,171,181,0.14)');
             humidityGradient.addColorStop(1, 'rgba(138,171,181,0)');
 
             humidityChart = new Chart(humidityCtx, {
@@ -1416,10 +1415,8 @@
                         data: humidityData,
                         borderColor: '#8aabb5',
                         backgroundColor: humidityGradient,
-                        borderWidth: 1.5,
-                        pointRadius: 0,
-                        tension: 0.3,
                         fill: true,
+                        pointHoverBackgroundColor: '#8aabb5',
                         spanGaps: false
                     }]
                 },
