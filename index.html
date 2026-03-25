@@ -1099,7 +1099,7 @@
 
                     if (entry.tempAvg !== undefined) tempData.push({ x: timestamp, y: entry.tempAvg });
                     if (entry.windAvg !== undefined) windData.push({ x: timestamp, y: entry.windAvg });
-                    if (entry.rainDelta !== undefined) rainData.push({ x: timestamp, y: Math.max(0, entry.rainDelta) });
+                    if (entry.rainDelta !== undefined) rainData.push({ x: timestamp, y: Math.max(0, entry.rainDelta) || null });
                     if (entry.humidityAvg !== undefined) humidityData.push({ x: timestamp, y: entry.humidityAvg });
                 }
 
@@ -1132,7 +1132,7 @@
                 }
                 const minuteRain = Object.values(hourlyRainMap).map(h => ({
                     x: h.time,
-                    y: Math.max(0, h.last - h.first)
+                    y: Math.max(0, h.last - h.first) || null
                 }));
                 rainData = rainData.concat(minuteRain);
                 rainData.sort((a, b) => a.x - b.x);
@@ -1147,7 +1147,7 @@
                     if (entry.tempMax !== undefined) tempMaxData.push({ x: timestamp, y: entry.tempMax });
                     if (entry.windAvg !== undefined) windData.push({ x: timestamp, y: entry.windAvg });
                     if (entry.windMax !== undefined) windMaxData.push({ x: timestamp, y: entry.windMax });
-                    if (entry.rainDelta !== undefined) rainData.push({ x: timestamp, y: Math.max(0, entry.rainDelta) });
+                    if (entry.rainDelta !== undefined) rainData.push({ x: timestamp, y: Math.max(0, entry.rainDelta) || null });
                     if (entry.humidityAvg !== undefined) humidityData.push({ x: timestamp, y: entry.humidityAvg });
                 }
             }
