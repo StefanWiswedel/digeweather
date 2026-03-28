@@ -4,6 +4,9 @@ on:
   repository_dispatch:
     types: [weather-reading]
 
+permissions:
+  contents: write
+
 concurrency:
   group: weather-update
   cancel-in-progress: false
