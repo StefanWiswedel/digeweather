@@ -1,0 +1,29 @@
+name: Update Weather Data
+
+on:
+  repository_dispatch:
+    types: [weather-reading]
+
+concurrency:
+  group: weather-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update weather data
+        run: node .github/scripts/update-weather.js '${{ toJSON(github.event.client_payload) }}'
+
+      - name: Commit and push
+        run: |
+          git config user.name "Weather Bot"
+          git config user.email "weather-bot@users.noreply.github.com"
+          git add data/weather.json
+          if ! git diff --staged --quiet; then
+            git commit -m "Weather update ${{ github.event.client_payload.ts }}"
+            git push || (git pull --rebase && git push)
+          fi
