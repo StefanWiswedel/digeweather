@@ -988,28 +988,33 @@
 
         function updateRainDisplay() {
             const history = weatherData.history;
+            const hourly = weatherData.hourly || [];
             let rain24h = 0;
             let rainLastHour = 0;
 
+            // 24h rain: sum hourly[].rainDelta for the last 24 hours
+            // (history only covers ~60 min, so it can't compute a 24h total)
+            if (hourly.length > 0 && history.length > 0) {
+                const latest = history[history.length - 1].timestamp;
+                const latestDate = parseTimestamp(latest);
+                const cutoff24h = new Date(latestDate.getTime() - 24 * 60 * 60 * 1000);
+
+                for (const entry of hourly) {
+                    if (entry.rainDelta !== undefined) {
+                        const entryDate = parseTimestamp(entry.hour);
+                        if (entryDate >= cutoff24h) {
+                            rain24h += Math.max(0, entry.rainDelta);
+                        }
+                    }
+                }
+            }
+
+            // 1h rain: use history[] cumulative gauge (covers ~60 min)
             if (history.length > 0) {
-                let firstRain = null;
+                let firstHourRain = null;
                 let lastRain = null;
 
                 for (let i = 0; i < history.length; i++) {
-                    if (history[i].rain !== undefined && history[i].rain >= 0) {
-                        if (firstRain === null) firstRain = history[i].rain;
-                        lastRain = history[i].rain;
-                    }
-                }
-
-                if (firstRain !== null && lastRain !== null) {
-                    rain24h = Math.max(0, lastRain - firstRain);
-                }
-
-                const hourAgo = Math.max(0, history.length - 60);
-                let firstHourRain = null;
-
-                for (let i = hourAgo; i < history.length; i++) {
                     if (history[i].rain !== undefined && history[i].rain >= 0) {
                         if (firstHourRain === null) firstHourRain = history[i].rain;
                         lastRain = history[i].rain;
