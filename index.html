@@ -1633,6 +1633,14 @@
         setInterval(fetchWeatherData, REFRESH_INTERVAL);
         setInterval(fetchForecast, 3600000);
         setInterval(updateRelativeTime, 15000);
+
+        // Re-fetch when tab becomes visible (mobile browsers suspend timers in background)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                fetchWeatherData();
+                updateRelativeTime();
+            }
+        });
     </script>
 </body>
 </html>
