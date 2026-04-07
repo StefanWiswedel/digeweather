@@ -687,7 +687,7 @@
             .fc-day-stats { flex-wrap: wrap; gap: 10px; }
         }
 
-        /* Tablet+ */
+        /* Tablet */
         @media (min-width: 640px) {
             .app {
                 max-width: 540px;
@@ -702,10 +702,71 @@
             }
         }
 
-        /* Desktop */
-        @media (min-width: 900px) {
-            .app { max-width: 600px; }
+        /* Desktop — two-column layout */
+        @media (min-width: 960px) {
+            .app {
+                max-width: 1080px;
+                padding: 0 40px 60px;
+                display: grid;
+                grid-template-columns: 300px 1fr;
+                grid-template-rows: auto auto auto auto auto;
+                gap: 0 40px;
+                grid-template-areas:
+                    "header   header"
+                    "hero     charts"
+                    "sidebar  charts"
+                    "forecast forecast"
+                    "footer   footer";
+            }
+
+            .header         { grid-area: header; }
+            .hero           { grid-area: hero; text-align: left; padding: 24px 0 16px; }
+            .metrics        { grid-area: sidebar; grid-template-columns: repeat(2, 1fr); align-self: start; }
+            .charts-section { grid-area: charts; }
+            .forecast-block { grid-area: forecast; }
+            .foot           { grid-area: footer; }
+
+            .hero-temp { font-size: 5.5rem; }
             .chart-area { height: 200px; }
+
+            /* Charts in a 2-col grid on wide screens */
+            .charts-section {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+            }
+
+            .charts-section .section-label {
+                grid-column: 1 / -1;
+            }
+
+            .forecast-list {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .forecast-row {
+                grid-template-columns: 56px 30px 1fr auto;
+            }
+        }
+
+        /* Wide desktop — bigger charts */
+        @media (min-width: 1200px) {
+            .app {
+                max-width: 1200px;
+            }
+
+            .chart-area { height: 220px; }
+
+            .forecast-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            body::before {
+                width: 900px;
+                height: 500px;
+            }
         }
 
         /* ---- Scrollbar ---- */
