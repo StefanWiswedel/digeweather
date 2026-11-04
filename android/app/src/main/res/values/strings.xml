@@ -6,6 +6,7 @@
     <string name="widget_humidity">Humidity</string>
     <string name="widget_rain">Rain 24h</string>
     <string name="widget_gust">Max gust 24h</string>
+    <string name="widget_car">Car battery</string>
     <string name="loading">Updating…</string>
     <string name="fetch_failed">Could not fetch data. Showing last known values.</string>
     <string name="no_data">No data yet.</string>

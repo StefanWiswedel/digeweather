@@ -3,6 +3,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -36,6 +37,10 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_single_info" />
         </receiver>
         <receiver android:name=".GustWidget" android:exported="false" android:label="@string/widget_gust">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_single_info" />
+        </receiver>
+        <receiver android:name=".CarWidget" android:exported="false" android:label="@string/widget_car">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_single_info" />
         </receiver>
