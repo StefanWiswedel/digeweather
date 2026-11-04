@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Dige Weather</string>
+    <string name="widget_all">Weather – all 4</string>
+    <string name="widget_temp">Temperature</string>
+    <string name="widget_humidity">Humidity</string>
+    <string name="widget_rain">Rain 24h</string>
+    <string name="widget_gust">Max gust 24h</string>
+    <string name="loading">Updating…</string>
+    <string name="fetch_failed">Could not fetch data. Showing last known values.</string>
+    <string name="no_data">No data yet.</string>
+    <string name="updated">Last reading: %1$s</string>
+    <string name="stale">Station silent since %1$s</string>
+    <string name="help">Add widgets: long-press your home screen → Widgets → Dige Weather.\nTap a widget to refresh it. Values turn amber when the station has not reported for 30 minutes.</string>
+    <string name="refresh">Refresh</string>
+    <string name="open_dashboard">Open dashboard</string>
+</resources>

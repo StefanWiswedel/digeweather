@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="android:Theme.Material.NoActionBar" />
+    <color name="widget_bg">#CC1E2429</color>
+    <color name="label">#B3FFFFFF</color>
+</resources>
