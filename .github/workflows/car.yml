@@ -1,0 +1,29 @@
+name: Car (manual)
+
+# Run by hand from the Actions tab to test the Renault connection.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "check = log in and read battery (changes nothing); start = start climate now"
+        type: choice
+        options: [check, start]
+        default: check
+
+jobs:
+  car:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --quiet 'renault-api>=0.6.3,<0.7'
+      - name: Run
+        env:
+          RENAULT_EMAIL: ${{ secrets.RENAULT_EMAIL }}
+          RENAULT_PASSWORD: ${{ secrets.RENAULT_PASSWORD }}
+          RENAULT_DEVICE_IDS: ${{ secrets.RENAULT_DEVICE_IDS }}
+          RENAULT_VIN: ${{ secrets.RENAULT_VIN }}
+        run: python .github/scripts/car.py ${{ inputs.mode }}

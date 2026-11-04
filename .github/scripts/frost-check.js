@@ -1,0 +1,69 @@
+/**
+ * Decides whether to pre-condition the car this reading.
+ * Run AFTER update-weather.js has written data/weather.json.
+ *
+ * Yes when ALL of:
+ *   - weekday (Mon–Fri)
+ *   - this is the first reading at or after START_TIME (previous reading was before it),
+ *     and it's still before the departure time (so a late reading doesn't fire)
+ *   - the lowest temperature in the last LOOKBACK_HOURS was <= FROST_TEMP
+ *
+ * Timestamps are the station's local time. Prints "precondition=true|false" to
+ * $GITHUB_OUTPUT when available.
+ */
+const fs = require('fs');
+const path = require('path');
+
+const START_TIME = process.env.START_TIME || '05:45';   // car runs ~15 min -> ready for 06:00
+const LATEST_TIME = process.env.LATEST_TIME || '06:00'; // don't fire after this
+const FROST_TEMP = parseFloat(process.env.FROST_TEMP || '3');
+const LOOKBACK_HOURS = parseFloat(process.env.LOOKBACK_HOURS || '8');
+
+function parse(ts) {
+  // "2026-11-04 05:45:12" or hourly "2026-11-04 05" -> Date (treated as UTC; only differences matter)
+  const s = ts.length === 13 ? ts + ':00:00' : ts;
+  return new Date(s.replace(' ', 'T') + 'Z');
+}
+
+function hhmm(ts) { return ts.substring(11, 16); }
+
+function decide(data) {
+  const history = data.history || [];
+  if (history.length < 2) return { yes: false, reason: 'not enough history' };
+  const cur = history[history.length - 1];
+  const prev = history[history.length - 2];
+  const now = parse(cur.timestamp);
+
+  const day = now.getUTCDay(); // 0 = Sunday (local time, parsed as UTC)
+  if (day === 0 || day === 6) return { yes: false, reason: 'weekend' };
+
+  const t = hhmm(cur.timestamp);
+  const crossed = t >= START_TIME && t < LATEST_TIME &&
+    (prev.timestamp.substring(0, 10) !== cur.timestamp.substring(0, 10) || hhmm(prev.timestamp) < START_TIME);
+  if (!crossed) return { yes: false, reason: `not the trigger reading (${t})` };
+
+  const cutoff = new Date(now.getTime() - LOOKBACK_HOURS * 3600 * 1000);
+  let min = Infinity;
+  for (const h of data.hourly || []) {
+    // Hourly entry "HH" covers roughly the hour before it was written; include if it ends after cutoff
+    if (h.tempMin !== undefined && parse(h.hour).getTime() + 3600 * 1000 > cutoff.getTime()) {
+      min = Math.min(min, h.tempMin);
+    }
+  }
+  for (const h of history) {
+    if (h.temperature !== undefined && parse(h.timestamp) >= cutoff) min = Math.min(min, h.temperature);
+  }
+  if (min === Infinity) return { yes: false, reason: 'no temperature data' };
+
+  const yes = min <= FROST_TEMP;
+  return { yes, reason: `lowest ${min}°C in last ${LOOKBACK_HOURS}h (limit ${FROST_TEMP}°C)` };
+}
+
+if (require.main === module) {
+  const data = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data', 'weather.json'), 'utf8'));
+  const r = decide(data);
+  console.log(`Pre-condition: ${r.yes ? 'YES' : 'no'} – ${r.reason}`);
+  if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `precondition=${r.yes}\n`);
+}
+
+module.exports = { decide };
