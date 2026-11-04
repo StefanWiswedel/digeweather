@@ -25,8 +25,22 @@ data class Snapshot(
 }
 
 const val STALE_MINUTES = 30L
-private const val DATA_URL =
-    "https://raw.githubusercontent.com/StefanWiswedel/digeweather/main/data/weather.json"
+private const val BASE_URL = "https://raw.githubusercontent.com/StefanWiswedel/digeweather/main/data/"
+
+/** Downloads a JSON file from the repo's data folder. Blocking. */
+fun fetchJson(name: String): JSONObject {
+    val conn = URL(BASE_URL + name).openConnection() as HttpURLConnection
+    conn.connectTimeout = 8000
+    conn.readTimeout = 8000
+    conn.useCaches = false
+    conn.setRequestProperty("User-Agent", "DigeWeatherWidget/1.0")
+    try {
+        if (conn.responseCode != 200) throw RuntimeException("HTTP ${conn.responseCode}")
+        return JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+    } finally {
+        conn.disconnect()
+    }
+}
 private val TS_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
 fun parseTs(s: String): LocalDateTime? = try {
@@ -41,20 +55,7 @@ fun parseTs(s: String): LocalDateTime? = try {
 object Weather {
 
     /** Downloads weather.json and computes the snapshot. Blocking; call off the main thread. */
-    fun fetch(): Snapshot {
-        val conn = URL(DATA_URL).openConnection() as HttpURLConnection
-        conn.connectTimeout = 8000
-        conn.readTimeout = 8000
-        conn.useCaches = false
-        conn.setRequestProperty("User-Agent", "DigeWeatherWidget/1.0")
-        try {
-            if (conn.responseCode != 200) throw RuntimeException("HTTP ${conn.responseCode}")
-            val body = conn.inputStream.bufferedReader().use { it.readText() }
-            return compute(JSONObject(body))
-        } finally {
-            conn.disconnect()
-        }
-    }
+    fun fetch(): Snapshot = compute(fetchJson("weather.json"))
 
     /**
      * Same rules as the web dashboard:
@@ -104,6 +105,31 @@ object Weather {
     }
 }
 
+/** ZOE battery status, written to data/car.json by the "Car battery status" workflow. */
+data class CarStatus(
+    val timestamp: String,   // when the car last reported (UTC, ISO 8601)
+    val level: Int,          // battery %, -1 = unknown
+    val rangeKm: Int,        // -1 = unknown
+    val plugged: Boolean,
+    val charging: Boolean,
+) {
+    companion object {
+        fun fetch(): CarStatus = parse(fetchJson("car.json"))
+
+        fun parse(j: JSONObject) = CarStatus(
+            timestamp = j.optString("timestamp"),
+            level = if (j.isNull("batteryLevel")) -1 else j.optInt("batteryLevel", -1),
+            rangeKm = if (j.isNull("range")) -1 else j.optInt("range", -1),
+            plugged = j.optBoolean("plugged"),
+            charging = j.optBoolean("charging"),
+        )
+    }
+
+    fun toJson(): JSONObject = JSONObject()
+        .put("timestamp", timestamp).put("batteryLevel", level).put("range", rangeKm)
+        .put("plugged", plugged).put("charging", charging)
+}
+
 /** Last fetched snapshot, kept so widgets can redraw without the network. */
 object Cache {
     private const val PREFS = "weather"
@@ -125,6 +151,15 @@ object Cache {
         fun d(k: String) = p.getString(k, null)?.toDoubleOrNull() ?: Double.NaN
         return Snapshot(ts, d("t"), d("h"), d("r"), d("g"))
     }
+
+    fun saveCar(ctx: Context, c: CarStatus) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString("car", c.toJson().toString()).apply()
+    }
+
+    fun loadCar(ctx: Context): CarStatus? =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("car", null)
+            ?.let { CarStatus.parse(JSONObject(it)) }
 
     fun fetchedAt(ctx: Context): Long =
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong("fetchedAt", 0L)

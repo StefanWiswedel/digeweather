@@ -3,6 +3,7 @@
 Usage:
   python car.py check   # log in, print vehicle and battery status (changes nothing)
   python car.py start   # start pre-conditioning (climate) now
+  python car.py status  # write battery status to data/car.json (for the phone widget)
   python car.py pair    # interactive, run on your own computer: handles the
                         # emailed two-factor code and prints RENAULT_DEVICE_IDS
 
@@ -78,6 +79,20 @@ async def main(mode):
             print(f"Battery: {battery.batteryLevel}%  range: {battery.batteryAutonomy} km  "
                   f"plugged in: {bool(battery.plugStatus)}  (as of {battery.timestamp})")
             print("Login and car access OK. Nothing was changed.")
+        elif mode == "status":
+            # Deliberately no location: the repo is public.
+            battery = await vehicle.get_battery_status()
+            status = {
+                "timestamp": battery.timestamp,
+                "batteryLevel": battery.batteryLevel,
+                "range": battery.batteryAutonomy,
+                "plugged": bool(battery.plugStatus),
+                "charging": (battery.chargingStatus or 0) > 0,
+                "chargingRemainingMinutes": battery.chargingRemainingTime,
+            }
+            with open(os.path.join("data", "car.json"), "w") as f:
+                json.dump(status, f)
+            print(json.dumps(status))
         elif mode == "start":
             temperature = float(env("RENAULT_TEMPERATURE", "21"))
             # Retry a couple of times; the Renault API is occasionally flaky.
@@ -91,7 +106,7 @@ async def main(mode):
                     await asyncio.sleep(10)
             sys.exit("Could not start pre-conditioning.")
         else:
-            sys.exit(f"Unknown mode {mode!r}; use check, start or pair")
+            sys.exit(f"Unknown mode {mode!r}; use check, status, start or pair")
 
 
 if __name__ == "__main__":

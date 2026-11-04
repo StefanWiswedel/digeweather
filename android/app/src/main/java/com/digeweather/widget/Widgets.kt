@@ -79,7 +79,7 @@ abstract class BaseWidget : AppWidgetProvider() {
     companion object {
         private val providers = listOf(
             AllWidget::class.java, TempWidget::class.java, HumidityWidget::class.java,
-            RainWidget::class.java, GustWidget::class.java,
+            RainWidget::class.java, GustWidget::class.java, CarWidget::class.java,
         )
 
         /** Fetches fresh data and redraws every widget. Blocking. Returns true on success. */
@@ -89,6 +89,13 @@ abstract class BaseWidget : AppWidgetProvider() {
                 true
             } catch (e: Exception) {
                 false
+            }
+            try {
+                val car = CarStatus.fetch()
+                Cache.saveCar(ctx, car)
+                LowBattery.check(ctx, car)
+            } catch (e: Exception) {
+                // car.json missing or offline: keep last known value
             }
             drawAll(ctx)
             return ok
@@ -139,4 +146,30 @@ class AllWidget : BaseWidget() {
             setTextColor(R.id.time, timeColor(s))
             setOnClickPendingIntent(R.id.root, tapIntent(ctx))
         }
+}
+
+/** Car battery tile: % and range, background red/amber/green by charge level. */
+class CarWidget : BaseWidget() {
+    override fun render(ctx: Context, s: Snapshot?): RemoteViews {
+        val car = Cache.loadCar(ctx)
+        return RemoteViews(ctx.packageName, R.layout.widget_single).apply {
+            val level = car?.level ?: -1
+            val bolt = if (car?.charging == true) "⚡" else ""
+            setTextViewText(R.id.value, if (level >= 0) "$bolt$level%" else "--")
+            setTextViewText(
+                R.id.label,
+                if (car != null && car.rangeKm >= 0) "Car · ${car.rangeKm} km" else "Car"
+            )
+            setTextColor(R.id.value, COLOR_TEXT)
+            setInt(R.id.root, "setBackgroundResource", batteryBackground(level))
+            setOnClickPendingIntent(R.id.root, tapIntent(ctx))
+        }
+    }
+}
+
+fun batteryBackground(level: Int) = when {
+    level < 0 -> R.drawable.widget_bg
+    level < LOW_BATTERY -> R.drawable.widget_bg_red
+    level < 50 -> R.drawable.widget_bg_amber
+    else -> R.drawable.widget_bg_green
 }

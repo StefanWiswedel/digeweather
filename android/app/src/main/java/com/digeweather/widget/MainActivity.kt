@@ -20,6 +20,13 @@ class MainActivity : Activity() {
             )
         }
         RefreshWorker.schedule(this)
+        // Needed on Android 13+ for the low-battery reminder.
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
         show(Cache.load(this), null)
         refresh()
     }
@@ -39,6 +46,11 @@ class MainActivity : Activity() {
         findViewById<TextView>(R.id.humidity).text = Metric.HUMIDITY.format(s)
         findViewById<TextView>(R.id.rain).text = Metric.RAIN.format(s)
         findViewById<TextView>(R.id.gust).text = Metric.GUST.format(s)
+        val car = Cache.loadCar(this)
+        findViewById<TextView>(R.id.car).text =
+            if (car == null || car.level < 0) "--"
+            else "${if (car.charging) "⚡" else ""}${car.level}%" +
+                (if (car.rangeKm >= 0) " · ${car.rangeKm} km" else "")
         val status = when {
             error != null -> error
             s == null -> getString(R.string.no_data)
