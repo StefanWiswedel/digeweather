@@ -30,3 +30,25 @@ jobs:
             git commit -m "Weather update ${{ github.event.client_payload.ts }}"
             git push || (git pull --rebase && git push)
           fi
+
+      # ---- Car pre-conditioning on frosty weekday mornings ----
+      - name: Frost check
+        id: frost
+        run: node .github/scripts/frost-check.js
+
+      - uses: actions/setup-python@v5
+        if: steps.frost.outputs.precondition == 'true'
+        with:
+          python-version: '3.12'
+
+      - name: Pre-condition car
+        if: steps.frost.outputs.precondition == 'true'
+        env:
+          RENAULT_EMAIL: ${{ secrets.RENAULT_EMAIL }}
+          RENAULT_PASSWORD: ${{ secrets.RENAULT_PASSWORD }}
+          RENAULT_DEVICE_IDS: ${{ secrets.RENAULT_DEVICE_IDS }}
+          RENAULT_VIN: ${{ secrets.RENAULT_VIN }}
+        run: |
+          if [ -z "$RENAULT_EMAIL" ]; then echo "Renault secrets not set; skipping."; exit 0; fi
+          pip install --quiet 'renault-api>=0.6.3,<0.7'
+          python .github/scripts/car.py start
