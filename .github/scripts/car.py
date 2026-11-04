@@ -13,6 +13,7 @@ Environment:
   RENAULT_VIN                       optional; defaults to the first car on the account
   RENAULT_LOCALE                    optional; default da_DK
   RENAULT_TEMPERATURE               optional; target cabin temperature, default 21
+  RENAULT_MIN_BATTERY               optional; skip pre-conditioning at or below this %, default 20
 """
 
 import asyncio
@@ -94,6 +95,12 @@ async def main(mode):
                 json.dump(status, f)
             print(json.dumps(status))
         elif mode == "start":
+            # Don't drain a nearly empty battery: only pre-condition above MIN_BATTERY %.
+            min_battery = int(env("RENAULT_MIN_BATTERY", "20"))
+            battery = await vehicle.get_battery_status()
+            if battery.batteryLevel is not None and battery.batteryLevel <= min_battery:
+                print(f"Battery {battery.batteryLevel}% (<= {min_battery}%): not pre-conditioning.")
+                return
             temperature = float(env("RENAULT_TEMPERATURE", "21"))
             # Retry a couple of times; the Renault API is occasionally flaky.
             for attempt in range(1, 4):
