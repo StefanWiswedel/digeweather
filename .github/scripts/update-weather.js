@@ -25,6 +25,7 @@ const path = require('path');
 
 const MAX_HISTORY = 60;
 const MAX_HOURLY = 168;
+const RAIN_MAX_GAP_MS = 10 * 60 * 1000;
 
 const COMPASS_DIRS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
@@ -62,8 +63,8 @@ function buildEntry(p) {
 
 function computeHourlyAggregate(history, hourStr) {
   let tempSum = 0, tMin = Infinity, tMax = -Infinity;
-  let windSum = 0, wMax = 0;
-  let rainStart = -1, rainEnd = 0;
+  let windSum = 0, wMax = 0, gMax = 0;
+  let rainSum = 0, rainSeen = false, prevRain = null, prevTime = null;
   let humSum = 0, hMin = 255, hMax = 0;
   let tempCount = 0, windCount = 0, humCount = 0;
   const dirCounts = new Array(8).fill(0);
@@ -86,14 +87,23 @@ function computeHourlyAggregate(history, hourStr) {
     if (h.windSpeed !== undefined) {
       windSum += h.windSpeed;
       if (h.windSpeed > wMax) wMax = h.windSpeed;
+      if (h.windGust !== undefined && h.windGust > gMax) gMax = h.windGust;
       windCount++;
       if (h.windDirection !== undefined) {
         dirCounts[degreesToCompassIndex(h.windDirection)]++;
       }
     }
     if (h.rain !== undefined && h.rain >= 0) {
-      if (rainStart < 0) rainStart = h.rain;
-      rainEnd = h.rain;
+      // Rain is a cumulative counter. Only count increases between readings
+      // that are close together, so counter resets and long data gaps
+      // (station offline) don't produce bogus totals.
+      const t = Date.parse(h.timestamp.replace(' ', 'T') + 'Z');
+      if (prevRain !== null && t - prevTime <= RAIN_MAX_GAP_MS && h.rain > prevRain) {
+        rainSum += h.rain - prevRain;
+      }
+      prevRain = h.rain;
+      prevTime = t;
+      rainSeen = true;
     }
   }
 
@@ -110,6 +120,7 @@ function computeHourlyAggregate(history, hourStr) {
   if (windCount > 0) {
     hourly.windAvg = round1(windSum / windCount);
     hourly.windMax = round1(wMax);
+    hourly.gustMax = round1(gMax);
     // Dominant wind direction
     let maxC = 0, domIdx = 0;
     for (let i = 0; i < 8; i++) {
@@ -118,8 +129,8 @@ function computeHourlyAggregate(history, hourStr) {
     hourly.windDir = COMPASS_DIRS[domIdx];
   }
 
-  if (rainStart >= 0) {
-    hourly.rainDelta = round1(rainEnd - rainStart);
+  if (rainSeen) {
+    hourly.rainDelta = round1(rainSum);
   }
 
   if (humCount > 0) {
