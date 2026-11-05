@@ -114,8 +114,6 @@ data class CarStatus(
     val charging: Boolean,
 ) {
     companion object {
-        fun fetch(): CarStatus = parse(fetchJson("car.json"))
-
         fun parse(j: JSONObject) = CarStatus(
             timestamp = j.optString("timestamp"),
             level = if (j.isNull("batteryLevel")) -1 else j.optInt("batteryLevel", -1),
@@ -124,10 +122,6 @@ data class CarStatus(
             charging = j.optBoolean("charging"),
         )
     }
-
-    fun toJson(): JSONObject = JSONObject()
-        .put("timestamp", timestamp).put("batteryLevel", level).put("range", rangeKm)
-        .put("plugged", plugged).put("charging", charging)
 }
 
 /** Last fetched snapshot, kept so widgets can redraw without the network. */
@@ -152,14 +146,22 @@ object Cache {
         return Snapshot(ts, d("t"), d("h"), d("r"), d("g"))
     }
 
-    fun saveCar(ctx: Context, c: CarStatus) {
+    /** Keeps the whole car.json so the app can show every field. */
+    fun saveCarJson(ctx: Context, json: JSONObject) {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putString("car", c.toJson().toString()).apply()
+            .putString("carJson", json.toString())
+            .putLong("carFetchedAt", System.currentTimeMillis())
+            .apply()
     }
 
-    fun loadCar(ctx: Context): CarStatus? =
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("car", null)
-            ?.let { CarStatus.parse(JSONObject(it)) }
+    fun loadCarJson(ctx: Context): JSONObject? =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("carJson", null)
+            ?.let { JSONObject(it) }
+
+    fun loadCar(ctx: Context): CarStatus? = loadCarJson(ctx)?.let { CarStatus.parse(it) }
+
+    fun carFetchedAt(ctx: Context): Long =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong("carFetchedAt", 0L)
 
     fun fetchedAt(ctx: Context): Long =
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong("fetchedAt", 0L)

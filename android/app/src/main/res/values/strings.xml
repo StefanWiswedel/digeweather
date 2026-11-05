@@ -12,7 +12,7 @@
     <string name="no_data">No data yet.</string>
     <string name="updated">Last reading: %1$s</string>
     <string name="stale">Station silent since %1$s</string>
-    <string name="help">Add widgets: long-press your home screen → Widgets → Dige Weather.\nTap a widget to refresh it. Values turn amber when the station has not reported for 30 minutes.</string>
-    <string name="refresh">Refresh</string>
+    <string name="help">Add widgets: long-press your home screen → Widgets → Dige Weather.\nTap a widget to open this screen. Weather values turn amber when the station has not reported for 30 minutes.</string>
+    <string name="refresh">Refresh now</string>
     <string name="open_dashboard">Open dashboard</string>
 </resources>
