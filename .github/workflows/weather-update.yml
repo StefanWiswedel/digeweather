@@ -68,6 +68,8 @@ jobs:
 
       - name: Update car status
         if: steps.cardue.outputs.due == 'true'
+        # A Renault hiccup must not mark the weather run as failed; the next half hour retries.
+        continue-on-error: true
         env:
           RENAULT_EMAIL: ${{ secrets.RENAULT_EMAIL }}
           RENAULT_PASSWORD: ${{ secrets.RENAULT_PASSWORD }}
