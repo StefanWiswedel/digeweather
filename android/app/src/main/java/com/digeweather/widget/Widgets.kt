@@ -39,7 +39,7 @@ enum class Metric(val label: String, val unit: String) {
     }
 }
 
-/** Base provider: draws from cache, refreshes in the background, tap = refresh. */
+/** Base provider: draws from cache, refreshes in the background, tap = open the app. */
 abstract class BaseWidget : AppWidgetProvider() {
 
     abstract fun render(ctx: Context, s: Snapshot?): RemoteViews
@@ -68,13 +68,12 @@ abstract class BaseWidget : AppWidgetProvider() {
         }
     }
 
-    protected fun tapIntent(ctx: Context): PendingIntent {
-        val i = Intent(ctx, javaClass).setAction(ACTION_REFRESH)
-        return PendingIntent.getBroadcast(
-            ctx, javaClass.name.hashCode(), i,
+    protected fun tapIntent(ctx: Context): PendingIntent =
+        PendingIntent.getActivity(
+            ctx, 0,
+            Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-    }
 
     companion object {
         private val providers = listOf(
@@ -91,9 +90,9 @@ abstract class BaseWidget : AppWidgetProvider() {
                 false
             }
             try {
-                val car = CarStatus.fetch()
-                Cache.saveCar(ctx, car)
-                LowBattery.check(ctx, car)
+                val json = fetchJson("car.json")
+                Cache.saveCarJson(ctx, json)
+                LowBattery.check(ctx, CarStatus.parse(json))
             } catch (e: Exception) {
                 // car.json missing or offline: keep last known value
             }

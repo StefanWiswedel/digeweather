@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:padding="20dp">
 
         <TextView
             android:layout_width="wrap_content"
@@ -19,36 +19,84 @@
             android:textSize="26sp"
             android:textStyle="bold" />
 
-        <GridLayout
+        <!-- Weather -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:columnCount="2">
+            android:layout_marginTop="16dp"
+            android:background="@drawable/card_bg"
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Temperature" android:textColor="@color/label" android:textSize="16sp" android:layout_marginEnd="24dp" android:layout_marginBottom="8dp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/temp" android:text="--" android:textColor="#FFFFFF" android:textSize="20sp" android:textStyle="bold" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Humidity" android:textColor="@color/label" android:textSize="16sp" android:layout_marginBottom="8dp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/humidity" android:text="--" android:textColor="#FFFFFF" android:textSize="20sp" android:textStyle="bold" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Rain (24h)" android:textColor="@color/label" android:textSize="16sp" android:layout_marginBottom="8dp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/rain" android:text="--" android:textColor="#FFFFFF" android:textSize="20sp" android:textStyle="bold" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Max gust (24h)" android:textColor="@color/label" android:textSize="16sp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/gust" android:text="--" android:textColor="#FFFFFF" android:textSize="20sp" android:textStyle="bold" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Car battery" android:textColor="@color/label" android:textSize="16sp" android:layout_marginTop="8dp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/car" android:text="--" android:textColor="#FFFFFF" android:textSize="20sp" android:textStyle="bold" android:layout_marginTop="8dp" />
-        </GridLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Weather"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/weather_rows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical" />
+
+            <TextView
+                android:id="@+id/weather_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/label"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- Car -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/card_bg"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Car"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/car_rows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical" />
+
+            <TextView
+                android:id="@+id/car_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/label"
+                android:textSize="13sp" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="12dp"
             android:textColor="@color/label"
             android:textSize="14sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:orientation="horizontal">
 
             <Button
@@ -68,9 +116,9 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="20dp"
             android:text="@string/help"
             android:textColor="@color/label"
-            android:textSize="14sp" />
+            android:textSize="13sp" />
     </LinearLayout>
 </ScrollView>

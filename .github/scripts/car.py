@@ -81,7 +81,14 @@ async def main(mode):
                   f"plugged in: {bool(battery.plugStatus)}  (as of {battery.timestamp})")
             print("Login and car access OK. Nothing was changed.")
         elif mode == "status":
-            # Deliberately no location: the repo is public.
+            # Deliberately no location or mileage: the repo is public / not wanted.
+            path = os.path.join("data", "car.json")
+            try:
+                with open(path) as f:
+                    previous = json.load(f)
+            except (OSError, ValueError):
+                previous = {}
+
             battery = await vehicle.get_battery_status()
             status = {
                 "timestamp": battery.timestamp,
@@ -91,7 +98,34 @@ async def main(mode):
                 "charging": (battery.chargingStatus or 0) > 0,
                 "chargingRemainingMinutes": battery.chargingRemainingTime,
             }
-            with open(os.path.join("data", "car.json"), "w") as f:
+
+            # Extra details only change when the car reports in, so only ask Renault for
+            # them when the battery report is new (keeps API calls down).
+            if battery.timestamp and battery.timestamp == previous.get("timestamp") and "extrasFetched" in previous:
+                for k in ("climate", "tyres", "extrasFetched"):
+                    if k in previous:
+                        status[k] = previous[k]
+            else:
+                try:
+                    hvac = await vehicle.get_hvac_status()
+                    status["climate"] = {
+                        "status": hvac.hvacStatus,
+                        "outsideTemp": hvac.externalTemperature,
+                        "insideTemp": hvac.internalTemperature,
+                        "minBattery": hvac.socThreshold,
+                        "updated": hvac.lastUpdateTime,
+                    }
+                except Exception as e:  # noqa: BLE001
+                    print(f"Climate status not available: {e}")
+                try:
+                    p = await vehicle.get_tyre_pressure()
+                    status["tyres"] = {"fl": p.flPressure, "fr": p.frPressure,
+                                       "rl": p.rlPressure, "rr": p.rrPressure}
+                except Exception as e:  # noqa: BLE001
+                    print(f"Tyre pressure not available: {e}")
+                status["extrasFetched"] = True
+
+            with open(path, "w") as f:
                 json.dump(status, f)
             print(json.dumps(status))
         elif mode == "start":
