@@ -36,8 +36,21 @@ jobs:
         id: frost
         run: node .github/scripts/frost-check.js
 
+      # Car battery status every 30 min, timed by the station's readings (GitHub's own
+      # scheduler skips most runs). Due when this reading starts a new half hour.
+      - name: Car status due?
+        id: cardue
+        run: |
+          node -e '
+            const h = require("./data/weather.json").history;
+            const slot = ts => ts.substring(0, 14) + (ts.substring(14, 16) < "30" ? "a" : "b");
+            const due = h.length >= 2 && slot(h[h.length - 1].timestamp) !== slot(h[h.length - 2].timestamp);
+            console.log("car status due:", due);
+            require("fs").appendFileSync(process.env.GITHUB_OUTPUT, "due=" + due + "\n");
+          '
+
       - uses: actions/setup-python@v5
-        if: steps.frost.outputs.precondition == 'true'
+        if: steps.frost.outputs.precondition == 'true' || steps.cardue.outputs.due == 'true'
         with:
           python-version: '3.12'
 
@@ -52,3 +65,23 @@ jobs:
           if [ -z "$RENAULT_EMAIL" ]; then echo "Renault secrets not set; skipping."; exit 0; fi
           pip install --quiet 'renault-api>=0.6.3,<0.7'
           python .github/scripts/car.py start
+
+      - name: Update car status
+        if: steps.cardue.outputs.due == 'true'
+        env:
+          RENAULT_EMAIL: ${{ secrets.RENAULT_EMAIL }}
+          RENAULT_PASSWORD: ${{ secrets.RENAULT_PASSWORD }}
+          RENAULT_DEVICE_IDS: ${{ secrets.RENAULT_DEVICE_IDS }}
+          RENAULT_VIN: ${{ secrets.RENAULT_VIN }}
+        run: |
+          if [ -z "$RENAULT_EMAIL" ]; then echo "Renault secrets not set; skipping."; exit 0; fi
+          pip install --quiet 'renault-api>=0.6.3,<0.7'
+          python .github/scripts/car.py status
+          git add data/car.json
+          if git diff --staged --quiet; then exit 0; fi
+          git commit -m "Car status update"
+          for i in 1 2 3 4 5; do
+            git pull --rebase --quiet && git push && exit 0
+            sleep $((i * 3))
+          done
+          exit 1

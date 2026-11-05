@@ -1,7 +1,7 @@
 name: Car battery status
 
-# Every 30 min: read the ZOE's battery and save it to data/car.json for the phone widget.
-# (GitHub may run scheduled jobs a few minutes late; fine for this.)
+# Backup for the car status update in weather-update.yml (which runs every 30 min
+# while the station is online). GitHub runs this schedule unreliably, so it's only a fallback.
 on:
   schedule:
     - cron: '7,37 * * * *'
