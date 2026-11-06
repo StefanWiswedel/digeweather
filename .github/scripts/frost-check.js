@@ -2,7 +2,11 @@
  * Decides whether to pre-condition the car this reading.
  * Run AFTER update-weather.js has written data/weather.json.
  *
+ * Settings come from config/precondition.json ({"enabled": bool, "frostTemp": °C}),
+ * which the phone app can change.
+ *
  * Yes when ALL of:
+ *   - enabled in config/precondition.json
  *   - weekday (Mon–Fri)
  *   - this is the first reading at or after START_TIME (previous reading was before it),
  *     and it's still before the departure time (so a late reading doesn't fire)
@@ -16,7 +20,16 @@ const path = require('path');
 
 const START_TIME = process.env.START_TIME || '05:45';   // car runs ~15 min -> ready for 06:00
 const LATEST_TIME = process.env.LATEST_TIME || '06:00'; // don't fire after this
-const FROST_TEMP = parseFloat(process.env.FROST_TEMP || '3');
+function loadConfig() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(process.cwd(), 'config', 'precondition.json'), 'utf8'));
+  } catch (e) {
+    return {};
+  }
+}
+const CONFIG = loadConfig();
+const ENABLED = CONFIG.enabled !== false;
+const FROST_TEMP = typeof CONFIG.frostTemp === 'number' ? CONFIG.frostTemp : 5;
 const LOOKBACK_HOURS = parseFloat(process.env.LOOKBACK_HOURS || '8');
 
 function parse(ts) {
@@ -27,7 +40,8 @@ function parse(ts) {
 
 function hhmm(ts) { return ts.substring(11, 16); }
 
-function decide(data) {
+function decide(data, { enabled = ENABLED, frostTemp = FROST_TEMP } = {}) {
+  if (!enabled) return { yes: false, reason: 'turned off in settings' };
   const history = data.history || [];
   if (history.length < 2) return { yes: false, reason: 'not enough history' };
   const cur = history[history.length - 1];
@@ -55,8 +69,8 @@ function decide(data) {
   }
   if (min === Infinity) return { yes: false, reason: 'no temperature data' };
 
-  const yes = min <= FROST_TEMP;
-  return { yes, reason: `lowest ${min}°C in last ${LOOKBACK_HOURS}h (limit ${FROST_TEMP}°C)` };
+  const yes = min <= frostTemp;
+  return { yes, reason: `lowest ${min}°C in last ${LOOKBACK_HOURS}h (limit ${frostTemp}°C)` };
 }
 
 if (require.main === module) {

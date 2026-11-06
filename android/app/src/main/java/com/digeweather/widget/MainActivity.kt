@@ -10,7 +10,9 @@ import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.Switch
 import android.widget.TextView
 import org.json.JSONObject
 import java.time.Duration
@@ -24,6 +26,8 @@ import kotlin.concurrent.thread
 class MainActivity : Activity() {
 
     private val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
+    private var frostTemp = 5.0
+    private var settingsLoaded = false
     private val dayTimeFmt = DateTimeFormatter.ofPattern("d MMM HH:mm", Locale.ENGLISH)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +39,7 @@ class MainActivity : Activity() {
                 Intent(Intent.ACTION_VIEW, Uri.parse("https://stefanwiswedel.github.io/digeweather/"))
             )
         }
+        setupPreheat()
         RefreshWorker.schedule(this)
         // Needed on Android 13+ for the low-battery reminder.
         if (Build.VERSION.SDK_INT >= 33 &&
@@ -56,9 +61,12 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.refresh).isEnabled = false
         thread {
             val ok = BaseWidget.refreshNow(applicationContext)
+            val settings = try { PreheatSettings.fetch() } catch (e: Exception) { null }
             runOnUiThread {
                 findViewById<Button>(R.id.refresh).isEnabled = true
                 show(if (ok) null else getString(R.string.fetch_failed))
+                // Don't overwrite values the user is editing.
+                if (settings != null && !settingsLoaded) showPreheat(settings)
             }
         }
     }
@@ -138,6 +146,49 @@ class MainActivity : Activity() {
             } ?: "--")
             append("\nLast refreshed: ").append(fetchedText(Cache.carFetchedAt(this@MainActivity)))
             append("\nThe car only reports when it's awake, so this can be hours old.")
+        }
+    }
+
+    // ---- morning pre-heat settings ----
+
+    private fun setupPreheat() {
+        val token = findViewById<EditText>(R.id.github_token)
+        token.setText(PreheatSettings.token(this))
+        findViewById<Button>(R.id.frost_minus).setOnClickListener { setFrost(frostTemp - 0.5) }
+        findViewById<Button>(R.id.frost_plus).setOnClickListener { setFrost(frostTemp + 0.5) }
+        findViewById<Button>(R.id.preheat_save).setOnClickListener { savePreheat() }
+    }
+
+    private fun showPreheat(s: PreheatSettings) {
+        settingsLoaded = true
+        findViewById<Switch>(R.id.preheat_enabled).isChecked = s.enabled
+        setFrost(s.frostTemp)
+    }
+
+    private fun setFrost(v: Double) {
+        frostTemp = v.coerceIn(-5.0, 10.0)
+        findViewById<TextView>(R.id.frost_temp).text = "%.1f°".format(Locale.US, frostTemp)
+    }
+
+    private fun savePreheat() {
+        val token = findViewById<EditText>(R.id.github_token).text.toString().trim()
+        PreheatSettings.saveToken(this, token)
+        val s = PreheatSettings(findViewById<Switch>(R.id.preheat_enabled).isChecked, frostTemp)
+        val status = findViewById<TextView>(R.id.preheat_status)
+        val button = findViewById<Button>(R.id.preheat_save)
+        status.text = "Saving…"
+        button.isEnabled = false
+        thread {
+            val msg = try {
+                PreheatSettings.save(token, s)
+                "Saved: " + (if (s.enabled) "on, frost limit %.1f°".format(Locale.US, s.frostTemp) else "off")
+            } catch (e: Exception) {
+                e.message ?: "Could not save."
+            }
+            runOnUiThread {
+                status.text = msg
+                button.isEnabled = true
+            }
         }
     }
 
