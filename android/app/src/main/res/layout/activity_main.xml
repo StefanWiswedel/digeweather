@@ -85,6 +85,105 @@
                 android:textSize="13sp" />
         </LinearLayout>
 
+
+        <!-- Morning pre-heat -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/card_bg"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Morning pre-heat"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <Switch
+                android:id="@+id/preheat_enabled"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Pre-heat on frosty weekdays (05:45)"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Frost if overnight low ≤"
+                    android:textColor="@color/label"
+                    android:textSize="15sp" />
+
+                <Button
+                    android:id="@+id/frost_minus"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="−" />
+
+                <TextView
+                    android:id="@+id/frost_temp"
+                    android:layout_width="64dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="--"
+                    android:textColor="#FFFFFF"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/frost_plus"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="+" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Checks the lowest temperature in the 8 hours before 05:45. Skipped if the battery is 20% or lower."
+                android:textColor="@color/label"
+                android:textSize="13sp" />
+
+            <EditText
+                android:id="@+id/github_token"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="GitHub token (needed to save)"
+                android:inputType="textPassword"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#80FFFFFF"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/preheat_save"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Save settings" />
+
+            <TextView
+                android:id="@+id/preheat_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/label"
+                android:textSize="13sp" />
+        </LinearLayout>
+
         <TextView
             android:id="@+id/status"
             android:layout_width="wrap_content"

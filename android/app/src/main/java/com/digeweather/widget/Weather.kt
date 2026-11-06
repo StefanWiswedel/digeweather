@@ -25,11 +25,11 @@ data class Snapshot(
 }
 
 const val STALE_MINUTES = 30L
-private const val BASE_URL = "https://raw.githubusercontent.com/StefanWiswedel/digeweather/main/data/"
+const val RAW_URL = "https://raw.githubusercontent.com/StefanWiswedel/digeweather/main/"
 
-/** Downloads a JSON file from the repo's data folder. Blocking. */
-fun fetchJson(name: String): JSONObject {
-    val conn = URL(BASE_URL + name).openConnection() as HttpURLConnection
+/** Downloads a JSON file from the repo's data folder (or another repo path). Blocking. */
+fun fetchJson(name: String, folder: String = "data/"): JSONObject {
+    val conn = URL(RAW_URL + folder + name + "?t=" + System.currentTimeMillis()).openConnection() as HttpURLConnection
     conn.connectTimeout = 8000
     conn.readTimeout = 8000
     conn.useCaches = false
