@@ -28,7 +28,15 @@ jobs:
           git add data/weather.json
           if ! git diff --staged --quiet; then
             git commit -m "Weather update ${{ github.event.client_payload.ts }}"
-            git push || (git pull --rebase && git push)
+            # GitHub occasionally returns a server error on push; retry a few times.
+            # If it still fails, skip this one reading (the next arrives in a minute)
+            # instead of failing the run and sending an email.
+            for i in 1 2 3 4 5; do
+              git push && exit 0
+              sleep $((i * 2))
+              git pull --rebase --quiet || true
+            done
+            echo "::warning::Could not save reading after 5 tries; skipped."
           fi
 
       # ---- Car pre-conditioning on frosty weekday mornings ----
