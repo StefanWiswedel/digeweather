@@ -1,10 +1,10 @@
 name: Car battery status
 
-# Backup for the car status update in weather-update.yml (which runs every 30 min
-# while the station is online). GitHub runs this schedule unreliably, so it's only a fallback.
+# Run by hand from the Actions tab to refresh data/car.json now.
+# (The weather runs already update it every 30 min. A scheduled backup used to
+# live here but GitHub ran it unreliably and Renault sometimes refuses calls,
+# which only produced failure emails.)
 on:
-  schedule:
-    - cron: '7,37 * * * *'
   workflow_dispatch:
 
 permissions:
