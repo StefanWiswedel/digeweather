@@ -1,1 +1,1 @@
-{"timestamp": "2026-11-10T05:29:14Z", "batteryLevel": 46, "range": 140, "plugged": false, "charging": false, "chargingRemainingMinutes": 20, "climate": {"status": "off", "outsideTemp": null, "insideTemp": null, "minBattery": 20.0, "updated": "2026-11-10T04:55:43Z"}, "extrasFetched": true}
+{"timestamp": "2026-11-10T05:38:46Z", "batteryLevel": 43, "range": 129, "plugged": false, "charging": false, "chargingRemainingMinutes": 20, "climate": {"status": "off", "outsideTemp": null, "insideTemp": null, "minBattery": 20.0, "updated": "2026-11-10T05:42:03Z"}, "extrasFetched": true}
