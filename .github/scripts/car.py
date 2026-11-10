@@ -2,7 +2,8 @@
 
 Usage:
   python car.py check   # log in, print vehicle and battery status (changes nothing)
-  python car.py start   # start pre-conditioning (climate) now
+  python car.py start   # start pre-conditioning (climate) now; records the outcome
+                        # in data/preheat.json for the phone notification
   python car.py status  # write battery status to data/car.json (for the phone widget)
   python car.py pair    # interactive, run on your own computer: handles the
                         # emailed two-factor code and prints RENAULT_DEVICE_IDS
@@ -60,6 +61,21 @@ async def find_vehicle(client):
             if link.vin and (not wanted_vin or link.vin == wanted_vin):
                 return await account.get_api_vehicle(link.vin)
     sys.exit("No vehicle found on this MyRenault account" + (f" with VIN {wanted_vin}" if wanted_vin else ""))
+
+
+def record_preheat(result, battery=None):
+    """Write today's pre-heat outcome for the phone app (sent / skipped_battery / failed)."""
+    low = os.environ.get("PREHEAT_LOW", "")
+    record = {
+        "date": os.environ.get("PREHEAT_DATE", ""),
+        "time": os.environ.get("PREHEAT_TIME", ""),
+        "result": result,
+        "overnightLow": float(low) if low else None,
+        "battery": battery,
+    }
+    with open(os.path.join("data", "preheat.json"), "w") as f:
+        json.dump(record, f)
+    print("Recorded:", json.dumps(record))
 
 
 async def main(mode):
@@ -134,6 +150,7 @@ async def main(mode):
             battery = await vehicle.get_battery_status()
             if battery.batteryLevel is not None and battery.batteryLevel <= min_battery:
                 print(f"Battery {battery.batteryLevel}% (<= {min_battery}%): not pre-conditioning.")
+                record_preheat("skipped_battery", battery.batteryLevel)
                 return
             temperature = float(env("RENAULT_TEMPERATURE", "21"))
             # Retry a couple of times; the Renault API is occasionally flaky.
@@ -141,14 +158,23 @@ async def main(mode):
                 try:
                     await vehicle.set_ac_start(temperature)
                     print(f"Pre-conditioning started (target {temperature} °C).")
+                    record_preheat("sent", battery.batteryLevel)
                     return
                 except Exception as e:  # noqa: BLE001
                     print(f"Attempt {attempt} failed: {e}")
                     await asyncio.sleep(10)
+            record_preheat("failed", battery.batteryLevel)
             sys.exit("Could not start pre-conditioning.")
         else:
             sys.exit(f"Unknown mode {mode!r}; use check, status, start or pair")
 
 
 if __name__ == "__main__":
-    asyncio.run(main(sys.argv[1] if len(sys.argv) > 1 else "check"))
+    mode = sys.argv[1] if len(sys.argv) > 1 else "check"
+    try:
+        asyncio.run(main(mode))
+    except Exception:
+        # e.g. Renault login refused: still tell the phone it failed.
+        if mode == "start":
+            record_preheat("failed")
+        raise

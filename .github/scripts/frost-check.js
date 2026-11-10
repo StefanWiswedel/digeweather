@@ -70,14 +70,20 @@ function decide(data, { enabled = ENABLED, frostTemp = FROST_TEMP } = {}) {
   if (min === Infinity) return { yes: false, reason: 'no temperature data' };
 
   const yes = min <= frostTemp;
-  return { yes, reason: `lowest ${min}°C in last ${LOOKBACK_HOURS}h (limit ${frostTemp}°C)` };
+  return {
+    yes, low: min, date: cur.timestamp.substring(0, 10), time: t,
+    reason: `lowest ${min}°C in last ${LOOKBACK_HOURS}h (limit ${frostTemp}°C)`,
+  };
 }
 
 if (require.main === module) {
   const data = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data', 'weather.json'), 'utf8'));
   const r = decide(data);
   console.log(`Pre-condition: ${r.yes ? 'YES' : 'no'} – ${r.reason}`);
-  if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `precondition=${r.yes}\n`);
+  if (process.env.GITHUB_OUTPUT) {
+    fs.appendFileSync(process.env.GITHUB_OUTPUT,
+      `precondition=${r.yes}\nlow=${r.low ?? ''}\ndate=${r.date ?? ''}\ntime=${r.time ?? ''}\n`);
+  }
 }
 
 module.exports = { decide };

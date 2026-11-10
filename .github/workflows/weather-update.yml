@@ -69,10 +69,24 @@ jobs:
           RENAULT_PASSWORD: ${{ secrets.RENAULT_PASSWORD }}
           RENAULT_DEVICE_IDS: ${{ secrets.RENAULT_DEVICE_IDS }}
           RENAULT_VIN: ${{ secrets.RENAULT_VIN }}
+          PREHEAT_DATE: ${{ steps.frost.outputs.date }}
+          PREHEAT_TIME: ${{ steps.frost.outputs.time }}
+          PREHEAT_LOW: ${{ steps.frost.outputs.low }}
         run: |
           if [ -z "$RENAULT_EMAIL" ]; then echo "Renault secrets not set; skipping."; exit 0; fi
           pip install --quiet 'renault-api>=0.6.3,<0.7'
-          python .github/scripts/car.py start
+          status=0
+          python .github/scripts/car.py start || status=$?
+          # Save the outcome (data/preheat.json) so the phone app can notify.
+          git add data/preheat.json 2>/dev/null || true
+          if ! git diff --staged --quiet; then
+            git commit -m "Pre-heat $PREHEAT_DATE"
+            for i in 1 2 3 4 5; do
+              git pull --rebase --quiet && git push && break
+              sleep $((i * 2))
+            done
+          fi
+          exit $status
 
       - name: Update car status
         if: steps.cardue.outputs.due == 'true'

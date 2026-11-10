@@ -74,6 +74,7 @@ class MainActivity : Activity() {
     private fun show(error: String?) {
         showWeather()
         showCar()
+        showLastPreheat()
         findViewById<TextView>(R.id.status).text = error ?: ""
     }
 
@@ -157,6 +158,14 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.frost_minus).setOnClickListener { setFrost(frostTemp - 0.5) }
         findViewById<Button>(R.id.frost_plus).setOnClickListener { setFrost(frostTemp + 0.5) }
         findViewById<Button>(R.id.preheat_save).setOnClickListener { savePreheat() }
+    }
+
+    private fun showLastPreheat() {
+        val last = getSharedPreferences("preheat", MODE_PRIVATE).getString("last", null)
+        findViewById<TextView>(R.id.preheat_last).text = last?.let {
+            val j = JSONObject(it)
+            "Last: ${j.optString("date")} – ${PreheatNotify.describe(j)}"
+        } ?: "Last: none yet"
     }
 
     private fun showPreheat(s: PreheatSettings) {

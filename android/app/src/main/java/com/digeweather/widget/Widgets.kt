@@ -96,6 +96,14 @@ abstract class BaseWidget : AppWidgetProvider() {
             } catch (e: Exception) {
                 // car.json missing or offline: keep last known value
             }
+            try {
+                val p = fetchJson("preheat.json")
+                ctx.getSharedPreferences("preheat", Context.MODE_PRIVATE).edit()
+                    .putString("last", p.toString()).apply()
+                PreheatNotify.check(ctx, p)
+            } catch (e: Exception) {
+                // no pre-heat has happened yet
+            }
             drawAll(ctx)
             return ok
         }
