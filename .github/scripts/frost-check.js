@@ -8,8 +8,8 @@
  * Yes when ALL of:
  *   - enabled in config/precondition.json
  *   - weekday (Mon–Fri)
- *   - this is the first reading at or after START_TIME (previous reading was before it),
- *     and it's still before the departure time (so a late reading doesn't fire)
+ *   - the reading is between START_TIME and LATEST_TIME, and today's attempt hasn't
+ *     already succeeded (failed attempts retry on the next reading)
  *   - the lowest temperature in the last LOOKBACK_HOURS was <= FROST_TEMP
  *
  * Timestamps are the station's local time. Prints "precondition=true|false" to
@@ -40,21 +40,33 @@ function parse(ts) {
 
 function hhmm(ts) { return ts.substring(11, 16); }
 
-function decide(data, { enabled = ENABLED, frostTemp = FROST_TEMP } = {}) {
+function loadPreheat() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data', 'preheat.json'), 'utf8'));
+  } catch (e) {
+    return {};
+  }
+}
+
+function decide(data, { enabled = ENABLED, frostTemp = FROST_TEMP, preheat = loadPreheat() } = {}) {
   if (!enabled) return { yes: false, reason: 'turned off in settings' };
   const history = data.history || [];
   if (history.length < 2) return { yes: false, reason: 'not enough history' };
   const cur = history[history.length - 1];
-  const prev = history[history.length - 2];
-  const now = parse(cur.timestamp);
+    const now = parse(cur.timestamp);
 
   const day = now.getUTCDay(); // 0 = Sunday (local time, parsed as UTC)
   if (day === 0 || day === 6) return { yes: false, reason: 'weekend' };
 
+  // Try on every reading from START_TIME until LATEST_TIME until today's attempt has
+  // succeeded (or was skipped for low battery). Renault sometimes refuses a call for a
+  // while, so a failed attempt is retried on the next reading (about a minute later).
   const t = hhmm(cur.timestamp);
-  const crossed = t >= START_TIME && t < LATEST_TIME &&
-    (prev.timestamp.substring(0, 10) !== cur.timestamp.substring(0, 10) || hhmm(prev.timestamp) < START_TIME);
-  if (!crossed) return { yes: false, reason: `not the trigger reading (${t})` };
+  if (t < START_TIME || t >= LATEST_TIME) return { yes: false, reason: `outside ${START_TIME}-${LATEST_TIME} (${t})` };
+  const today = cur.timestamp.substring(0, 10);
+  if (preheat.date === today && preheat.result !== 'failed') {
+    return { yes: false, reason: `already done today (${preheat.result})` };
+  }
 
   const cutoff = new Date(now.getTime() - LOOKBACK_HOURS * 3600 * 1000);
   let min = Infinity;

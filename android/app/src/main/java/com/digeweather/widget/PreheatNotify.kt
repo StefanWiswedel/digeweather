@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import org.json.JSONObject
 import java.time.LocalDate
+import java.time.LocalTime
 import java.util.Locale
 
 /** One notification per morning when the GitHub job pre-heats (or skips/fails). */
@@ -23,9 +24,10 @@ object PreheatNotify {
             " (overnight low %.1f°)".format(Locale.US, j.optDouble("overnightLow"))
         val battery = if (j.isNull("battery")) "" else "${j.optInt("battery")}%"
         return when (j.optString("result")) {
-            "sent" -> "Pre-heat started at ${j.optString("time")}$low"
+            "sent" -> "Pre-heat started at ${j.optString("time")}$low" +
+                (if (j.optInt("attempts", 1) > 1) ", try ${j.optInt("attempts")}" else "")
             "skipped_battery" -> "Frost likely$low, but battery is $battery: not pre-heating"
-            "failed" -> "Pre-heat FAILED at ${j.optString("time")}$low"
+            "failed" -> "Pre-heat FAILED after ${j.optInt("attempts", 1)} tries$low"
             else -> j.optString("result")
         }
     }
@@ -33,8 +35,13 @@ object PreheatNotify {
     fun check(ctx: Context, j: JSONObject) {
         val date = j.optString("date")
         if (date != LocalDate.now().toString()) return // only today's
+        val result = j.optString("result")
+        // Failed attempts are retried every minute until 06:00; only report a failure
+        // once the retries are over.
+        if (result == "failed" && LocalTime.now().isBefore(LocalTime.of(6, 0))) return
+        val key = "$date/$result"
         val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        if (prefs.getString("notifiedDate", "") == date) return
+        if (prefs.getString("notifiedKey", "") == key) return
 
         if (Build.VERSION.SDK_INT >= 33 &&
             ctx.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -55,6 +62,6 @@ object PreheatNotify {
             .setAutoCancel(true)
             .build()
         nm.notify(2, n)
-        prefs.edit().putString("notifiedDate", date).apply()
+        prefs.edit().putString("notifiedKey", key).apply()
     }
 }

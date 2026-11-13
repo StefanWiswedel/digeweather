@@ -66,14 +66,25 @@ async def find_vehicle(client):
 def record_preheat(result, battery=None):
     """Write today's pre-heat outcome for the phone app (sent / skipped_battery / failed)."""
     low = os.environ.get("PREHEAT_LOW", "")
+    date = os.environ.get("PREHEAT_DATE", "")
+    path = os.path.join("data", "preheat.json")
+    attempts = 1
+    try:
+        with open(path) as f:
+            prev = json.load(f)
+        if prev.get("date") == date:
+            attempts = int(prev.get("attempts", 1)) + 1
+    except (OSError, ValueError):
+        pass
     record = {
-        "date": os.environ.get("PREHEAT_DATE", ""),
+        "date": date,
         "time": os.environ.get("PREHEAT_TIME", ""),
         "result": result,
         "overnightLow": float(low) if low else None,
         "battery": battery,
+        "attempts": attempts,
     }
-    with open(os.path.join("data", "preheat.json"), "w") as f:
+    with open(path, "w") as f:
         json.dump(record, f)
     print("Recorded:", json.dumps(record))
 
