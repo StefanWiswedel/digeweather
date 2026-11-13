@@ -14,7 +14,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
 
@@ -64,6 +64,9 @@ jobs:
 
       - name: Pre-condition car
         if: steps.frost.outputs.precondition == 'true'
+        # A failed attempt is retried on the next reading until 06:00 and reported on the
+        # phone, so don't fail the run (that would send an email for every attempt).
+        continue-on-error: true
         env:
           RENAULT_EMAIL: ${{ secrets.RENAULT_EMAIL }}
           RENAULT_PASSWORD: ${{ secrets.RENAULT_PASSWORD }}
