@@ -154,7 +154,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Decided at 05:45 on weekdays from the lowest temperature in the previous 8 hours. Skipped if the battery is 20% or lower. You get a notification when it runs."
+                android:text="Decided at 05:45 on weekdays from the lowest temperature in the previous 4 hours. Skipped if the battery is 20% or lower. You get a notification when it runs."
                 android:textColor="@color/label"
                 android:textSize="13sp" />
 

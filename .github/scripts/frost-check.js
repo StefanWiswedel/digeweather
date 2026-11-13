@@ -30,7 +30,7 @@ function loadConfig() {
 const CONFIG = loadConfig();
 const ENABLED = CONFIG.enabled !== false;
 const FROST_TEMP = typeof CONFIG.frostTemp === 'number' ? CONFIG.frostTemp : 5;
-const LOOKBACK_HOURS = parseFloat(process.env.LOOKBACK_HOURS || '8');
+const LOOKBACK_HOURS = parseFloat(process.env.LOOKBACK_HOURS || '4');
 
 function parse(ts) {
   // "2026-11-04 05:45:12" or hourly "2026-11-04 05" -> Date (treated as UTC; only differences matter)
@@ -71,8 +71,9 @@ function decide(data, { enabled = ENABLED, frostTemp = FROST_TEMP, preheat = loa
   const cutoff = new Date(now.getTime() - LOOKBACK_HOURS * 3600 * 1000);
   let min = Infinity;
   for (const h of data.hourly || []) {
-    // Hourly entry "HH" covers roughly the hour before it was written; include if it ends after cutoff
-    if (h.tempMin !== undefined && parse(h.hour).getTime() + 3600 * 1000 > cutoff.getTime()) {
+    // Hourly entry "HH" is written just after HH:00 and covers the hour before it
+    // (HH-1:00 to HH:00), so include it if that hour ends after the cutoff.
+    if (h.tempMin !== undefined && parse(h.hour).getTime() > cutoff.getTime()) {
       min = Math.min(min, h.tempMin);
     }
   }
